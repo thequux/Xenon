@@ -1,0 +1,25 @@
+VERBOSE=
+include std-defs.mk
+prebuild += tools/ccdv
+
+
+boot.img: krnl-s menu.lst boot.img.tmpl
+	cp boot.img.tmpl boot.img
+	mount -o loop boot.img /mnt/floppy
+	cp krnl-s /mnt/floppy/boot/krnl-1
+	cp menu.lst /mnt/floppy/boot/grub/menu.lst
+	umount /mnt/floppy
+
+tools/ccdv: tools/ccdv.c
+	gcc -o tools/ccdv tools/ccdv.c
+
+krnl-s: krnl
+	@ccdv objcopy -g krnl krnl-s
+
+krnl: asm/boot.o misc/main.o misc/support.o asm/handlers.o hardware/kbd.o hardware/serial.o hardware/io.o hardware/console.o misc/kqueue.o misc/printf.o
+	@ccdv ld  $(LDFLAGS) -o $@ $^ -Map krnl.map
+	@ccdv tools/map2sym.sh krnl.map krnl.sym
+
+$(phony clean):
+	-rm  $(filter_out boot.img, $(only_targets **/*)) krnl.map krnl.sym  2>/dev/null
+#	vim: filetype=make

@@ -1,0 +1,2 @@
+include std-defs.mk
+kqueue.o: ../includes/kqueue_impl.h kqueue_gen.c kqueue_impl.c

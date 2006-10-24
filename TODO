@@ -1,0 +1,44 @@
+#!/bin/zsh
+# Features necessary: (format: feature <tab> features necessary for implementation)
+function src() {
+cat <<__EOF__
+kalloc			bare_elf
+bare_elf		.
+all_ansi_codes		.
+keyboard		all_ansi_codes
+io_interface		.
+level_switching		.
+syscall			level_switching
+io_system		io_interface keyboard all_ansi_codes
+shell			keyboard
+userspace		level_switching filesystem io_interface libc
+libc			filesystem io_system elf posix kalloc
+paging			elf disk
+filesystem		disk ext2 mbr shell
+disk			.
+ext2			mbr disk shell
+elf			bare_elf
+final			posix userspace user_shell
+posix			read write exec fork open close
+read			syscall io_system
+write			syscall io_system
+exec			elf syscall
+fork			processes syscall
+open			filesystem syscall io_system
+close			open
+processes		level_switching paging
+user_shell		libc userspace
+__EOF__
+}
+
+c=$'\a'
+src | sed -e 's/$/ \a/' |sed -re 's/[ \t]+/\n/g' | ( while read x ; do 
+	if [[ "$x" == $'\a' ]]; then
+		c=$'\a'
+	elif [[ "$c" == $'\a' ]]; then
+		c=$x
+	else
+		echo $c $x
+	fi
+done) | tsort
+
