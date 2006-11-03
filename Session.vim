@@ -5,13 +5,24 @@ set cpo&vim
 map! <S-Insert> *
 map Q gq
 nmap gx <Plug>NetrwBrowseX
+map <T-Right> l
+map <C-F19> <C-PageUp>
+map <C-F20> <C-PageDown>
+map <C-Left> h|
+map <C-Right> l|
+map <C-Up> k_
+map <C-Down> j_
 nnoremap <silent> <Plug>NetrwBrowseX :call netrw#NetBrowseX(expand("<cWORD>"),0)
+vmap ñ !par-format -jw60           
+nmap ñ {v}!par-format -jw60
+omap ñ {v}!par-format -jw60
 let &cpo=s:cpo_save
 unlet s:cpo_save
 set autoindent
 set background=dark
 set backspace=2
 set fileencodings=ucs-bom,utf-8,default
+set formatprg=par-fomrat\ -w60
 set history=50
 set hlsearch
 set iminsert=0
@@ -23,42 +34,43 @@ set suffixes=.bak,~,.o,.h,.info,.swp,.obj,.info,.aux,.log,.dvi,.bbl,.out,.o,.lo
 set termencoding=utf-8
 set viminfo='20,\"500
 set window=33
+set winminheight=0
 let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
 let v:this_session=expand("<sfile>:p")
 silent only
-cd ~/ostest
+cd ~/ostest/trunk
 if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
 badd +7 Makefile
 badd +9 Makeppfile
-badd +1 std-defs.mk
-badd +40 misc/support.c
+badd +9 std-defs.mk
+badd +30 misc/support.c
 badd +10 misc/main.c
 badd +210 asm/boot.S
 badd +1 hardware/kbd.c
-badd +1 hardware/serial.c
+badd +19 hardware/serial.c
 badd +6 includes/ctools.h
-badd +1 includes/target_cfg.h
+badd +12 includes/target_cfg.h
 badd +1 includes/config.h
-badd +954 asm/handlers.S
+badd +4418 asm/handlers.S
 badd +1 hardware/Makeppfile
 badd +14 hardware/io.c
-badd +30 hardware/console.c
+badd +158 hardware/console.c
 badd +37 misc/kqueue_impl.c
 badd +1 misc/kqueue.cc
-badd +8 misc/kqueue_gen.c
+badd +10 misc/kqueue_gen.c
 badd +2 misc/kqueue.c
 badd +52 includes/kqueue_impl.h
 badd +2 includes/kqueue.h
 badd +1 kqueue_impl.h
 badd +1 kqueue_gen.c
-badd +0 misc/Makeppfile
+badd +1 misc/Makeppfile
 badd +6 asm/font.S
-badd +0 includes/stdarg.h
-badd +0 misc/printf.c
-badd +0 includes/video.h
+badd +1 includes/stdarg.h
+badd +420 misc/printf.c
+badd +5 includes/video.h
 silent! argdel *
 edit includes/stdarg.h
 set splitbelow splitright
@@ -73,9 +85,9 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe '2resize ' . ((&lines * 1 + 17) / 34)
-exe '3resize ' . ((&lines * 28 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe '2resize ' . ((&lines * 1 + 17) / 35)
+exe '3resize ' . ((&lines * 29 + 17) / 35)
 argglobal
 setlocal noarabic
 setlocal autoindent
@@ -178,7 +190,7 @@ if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
 1
-normal! 011l
+normal! 0
 wincmd w
 argglobal
 edit misc/main.c
@@ -384,7 +396,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 30 - ((27 * winheight(0) + 14) / 28)
+let s:l = 30 - ((28 * winheight(0) + 14) / 29)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -392,9 +404,9 @@ normal! zt
 normal! 02l
 wincmd w
 3wincmd w
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe '2resize ' . ((&lines * 1 + 17) / 34)
-exe '3resize ' . ((&lines * 28 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe '2resize ' . ((&lines * 1 + 17) / 35)
+exe '3resize ' . ((&lines * 29 + 17) / 35)
 tabnew
 edit misc/kqueue_gen.c
 set splitbelow splitright
@@ -410,11 +422,11 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 3 + 17) / 34)
-exe '2resize ' . ((&lines * 28 + 17) / 34)
-exe 'vert 2resize ' . ((&columns * 51 + 61) / 122)
-exe '3resize ' . ((&lines * 28 + 17) / 34)
-exe 'vert 3resize ' . ((&columns * 70 + 61) / 122)
+exe '1resize ' . ((&lines * 3 + 17) / 35)
+exe '2resize ' . ((&lines * 29 + 17) / 35)
+exe 'vert 2resize ' . ((&columns * 52 + 63) / 126)
+exe '3resize ' . ((&lines * 29 + 17) / 35)
+exe 'vert 3resize ' . ((&columns * 73 + 63) / 126)
 argglobal
 setlocal noarabic
 setlocal autoindent
@@ -617,7 +629,7 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 42 - ((18 * winheight(0) + 14) / 28)
+let s:l = 42 - ((19 * winheight(0) + 14) / 29)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -722,18 +734,18 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 9 - ((8 * winheight(0) + 14) / 28)
+let s:l = 9 - ((8 * winheight(0) + 14) / 29)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
 9
 normal! 01l
 wincmd w
-exe '1resize ' . ((&lines * 3 + 17) / 34)
-exe '2resize ' . ((&lines * 28 + 17) / 34)
-exe 'vert 2resize ' . ((&columns * 51 + 61) / 122)
-exe '3resize ' . ((&lines * 28 + 17) / 34)
-exe 'vert 3resize ' . ((&columns * 70 + 61) / 122)
+exe '1resize ' . ((&lines * 3 + 17) / 35)
+exe '2resize ' . ((&lines * 29 + 17) / 35)
+exe 'vert 2resize ' . ((&columns * 52 + 63) / 126)
+exe '3resize ' . ((&lines * 29 + 17) / 35)
+exe 'vert 3resize ' . ((&columns * 73 + 63) / 126)
 tabnew
 edit misc/printf.c
 set splitbelow splitright
@@ -748,9 +760,9 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe '2resize ' . ((&lines * 28 + 17) / 34)
-exe '3resize ' . ((&lines * 1 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe '2resize ' . ((&lines * 28 + 17) / 35)
+exe '3resize ' . ((&lines * 2 + 17) / 35)
 argglobal
 setlocal noarabic
 setlocal autoindent
@@ -892,7 +904,7 @@ setlocal foldignore=#
 setlocal foldlevel=0
 setlocal foldmarker={{{,}}}
 set foldmethod=marker
-setlocal foldmethod=marker
+setlocal foldmethod=syntax
 setlocal foldminlines=1
 setlocal foldnestmax=20
 setlocal foldtext=foldtext()
@@ -953,18 +965,12 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-266
-normal zo
-293
-normal zo
-266
-normal zo
-let s:l = 158 - ((18 * winheight(0) + 14) / 28)
+let s:l = 158 - ((50 * winheight(0) + 14) / 28)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
 158
-normal! 036l
+normal! 0
 wincmd w
 argglobal
 edit hardware/kbd.c
@@ -1064,17 +1070,17 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 2 - ((0 * winheight(0) + 0) / 1)
+let s:l = 2 - ((0 * winheight(0) + 1) / 2)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
 2
-normal! 018l
+normal! 017l
 wincmd w
 2wincmd w
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe '2resize ' . ((&lines * 28 + 17) / 34)
-exe '3resize ' . ((&lines * 1 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe '2resize ' . ((&lines * 28 + 17) / 35)
+exe '3resize ' . ((&lines * 2 + 17) / 35)
 tabnew
 edit hardware/serial.c
 set splitbelow splitright
@@ -1179,7 +1185,7 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 19 - ((18 * winheight(0) + 16) / 33)
+let s:l = 19 - ((18 * winheight(0) + 17) / 34)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1199,9 +1205,9 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe '2resize ' . ((&lines * 5 + 17) / 34)
-exe '3resize ' . ((&lines * 24 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe '2resize ' . ((&lines * 5 + 17) / 35)
+exe '3resize ' . ((&lines * 25 + 17) / 35)
 argglobal
 setlocal noarabic
 setlocal autoindent
@@ -1511,7 +1517,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 9 - ((8 * winheight(0) + 12) / 24)
+let s:l = 9 - ((8 * winheight(0) + 12) / 25)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1519,9 +1525,9 @@ normal! zt
 normal! 084l
 wincmd w
 3wincmd w
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe '2resize ' . ((&lines * 5 + 17) / 34)
-exe '3resize ' . ((&lines * 24 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe '2resize ' . ((&lines * 5 + 17) / 35)
+exe '3resize ' . ((&lines * 25 + 17) / 35)
 tabnew
 edit includes/target_cfg.h
 set splitbelow splitright
@@ -1540,12 +1546,12 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe 'vert 1resize ' . ((&columns * 37 + 61) / 122)
-exe '2resize ' . ((&lines * 1 + 17) / 34)
-exe 'vert 2resize ' . ((&columns * 84 + 61) / 122)
-exe '3resize ' . ((&lines * 28 + 17) / 34)
-exe '4resize ' . ((&lines * 1 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe 'vert 1resize ' . ((&columns * 38 + 63) / 126)
+exe '2resize ' . ((&lines * 1 + 17) / 35)
+exe 'vert 2resize ' . ((&columns * 87 + 63) / 126)
+exe '3resize ' . ((&lines * 29 + 17) / 35)
+exe '4resize ' . ((&lines * 1 + 17) / 35)
 argglobal
 setlocal noarabic
 setlocal autoindent
@@ -1855,7 +1861,7 @@ setlocal nowinfixheight
 setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
-let s:l = 5 - ((4 * winheight(0) + 14) / 28)
+let s:l = 5 - ((4 * winheight(0) + 14) / 29)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1969,12 +1975,12 @@ normal! zt
 normal! 0
 wincmd w
 3wincmd w
-exe '1resize ' . ((&lines * 1 + 17) / 34)
-exe 'vert 1resize ' . ((&columns * 37 + 61) / 122)
-exe '2resize ' . ((&lines * 1 + 17) / 34)
-exe 'vert 2resize ' . ((&columns * 84 + 61) / 122)
-exe '3resize ' . ((&lines * 28 + 17) / 34)
-exe '4resize ' . ((&lines * 1 + 17) / 34)
+exe '1resize ' . ((&lines * 1 + 17) / 35)
+exe 'vert 1resize ' . ((&columns * 38 + 63) / 126)
+exe '2resize ' . ((&lines * 1 + 17) / 35)
+exe 'vert 2resize ' . ((&columns * 87 + 63) / 126)
+exe '3resize ' . ((&lines * 29 + 17) / 35)
+exe '4resize ' . ((&lines * 1 + 17) / 35)
 tabnew
 edit asm/handlers.S
 set splitbelow splitright
@@ -2089,25 +2095,27 @@ normal zo
 normal zo
 454
 normal zo
-574
+561
 normal zo
 309
 normal zo
-923
+643
 normal zo
-924
+914
 normal zc
-946
+643
 normal zo
-1072
+932
 normal zo
-1095
+1063
+normal zo
+1081
 normal zc
-923
-normal zo
+932
+normal zc
 308
 normal zo
-let s:l = 4418 - ((3336 * winheight(0) + 16) / 33)
+let s:l = 4418 - ((3486 * winheight(0) + 17) / 34)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -2249,7 +2257,7 @@ normal zo
 normal zo
 305
 normal zo
-let s:l = 290 - ((17 * winheight(0) + 16) / 33)
+let s:l = 290 - ((18 * winheight(0) + 17) / 34)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
