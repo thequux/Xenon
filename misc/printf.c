@@ -379,7 +379,7 @@ int vprintf_help(unsigned c, void **ptr __attribute__((unused)))
 
 	if (c == 0 || pos == buf + 127) {
 		*pos = 0;
-		k_swrite(buf, OUT_DBG);
+		k_swrite(buf, OUT_STD);
 		pos = buf;
 	}
 	

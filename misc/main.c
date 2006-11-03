@@ -119,7 +119,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	
 	//scroll (5);
 	//spin(10000000);
-	//k_cls();
+	k_cls();
 	
 	for (int i = 0; i < 16; i++) {
 		VMEM_C(1,i+3)[0] = hex[i];

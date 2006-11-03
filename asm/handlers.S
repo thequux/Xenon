@@ -1086,18 +1086,18 @@ int_27 : ; {{{3
 		;int 8
 		;.tmp: dd 0xffffff,0xffffff
 
-		mov al, '2'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, '7'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
+		;mov al, '2'
+		;push DWORD eax
+		;call dbg
+		;add esp, BYTE 4
+		;mov al, '7'
+		;push DWORD eax
+		;call dbg
+		;add esp, BYTE 4
+		;mov al, 0x0a
+		;push DWORD eax
+		;call dbg
+		;add esp, BYTE 4
 	popa
 	sti
 	iret

@@ -9,8 +9,7 @@ void scroll (int lines);
 
 int printf(const char* template, ...);
 
-extern int vmem_base;
-#define VMEM_C(x,y)  (vmem+(((y+(vmem_base))*maxcol_p+(x))*2))
+#define VMEM_C(x,y)  (vmem+(((y)*maxcol_p+(x))*2))
 
 #define maxcol_p	80
 #define maxrow_p	25

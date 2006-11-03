@@ -11,7 +11,6 @@ static int gattr;
 extern volatile unsigned char* vmem;
 //extern unsigned char font[];
 int scroll_p;
-int vmem_base = 1;
 void* get_vmem_base () {
 	char gc6;
 	outb (GRAPHICS_ADDR_REG, 0x06);
@@ -33,77 +32,14 @@ void* get_vmem_base () {
 
 }
 void init_con () {
-	vmem = get_vmem_base();
-//	k_cls();
+	k_cls();
 	char seq3;
 	set_font (NULL,1);
-	memset((void*)vmem, 0x1f, 160);
+
 	// make sure that planes are correct...
 	outb (SEQ_ADDR_REG, 0x03);
 	seq3 = inb (SEQ_DATA_REG);
 	outb (SEQ_DATA_REG, 0x20);
-
-	// set up split...
-	int reg = ((inb(0x3cc)&0x01)?0x3D4:0x3B4);
-	printf("%x\n",reg);
-
-	outb (reg, 0x0d); // start_low
-	outb (reg+1, 80);
-	outb (reg, 0x0c); // start_high
-	outb (reg+1, 0x00);
-
-	outb (reg, 0x18);	// lc main
-	outb (reg+1, 0x7f);
-	
-	outb (reg, 0x07);	
-	char rt = inb (reg+1);
-	outb (reg+1, rt | 0x10); // lc[8]
-
-	outb (reg, 0x09);
-	rt = inb (reg+1);
-	outb (reg+1, rt & (~0x40)); // lc[9]
-	
-	char save;
-	char att10;
-	__asm__ ("cli");	//  for safety
-		        inb (0x3da);
-		save =  inb (0x3C0);
-		;	outb(0x3c0, 0x10);
-		att10 =	inb (0x3C1);
-			outb(0x3C0, att10 &  ~0x20);
-			outb(0x3C0, save);
-			inb (0x3da);
-	
-	__asm__ ("sti");
-	/*;
-	//attr[0x10][5] = 1
-	__asm__ ("cli\n\t"	// this is critical!
-		 "pusha\n\t"
-		 "movw $0x3DA, %dx\n\t"
-		 "inb %dx, %al\n\t"
-		 "outb %al, $0xEB\n\t"	//delay
-		 "movw $0x3C0, %dx\n\t"
-		 "inb %dx, %al\n\t"
-		 "outb %al, $0xEB\n\t"	// delay
-		 "pushw %ax\n\t"
-		 "movb $0x10, %al\n\t"
-		 "outb %al, $0xEB\n\t"	// delay
-		 "outb %al, %dx\n\t"
-		 "movw $0x3C1, %dx\n\t"
-		 "outb %al, $0xEB\n\t"	// delay
-		 "inb %dx, %al\n\t"
-		 "or $0x20, %al\n\t"
-		 "movw $0x3C0, %dx\n\t"
-		 "outb %al, $0xEB\n\t"	// delay
-		 "outb %al, %dx\n\t"
-		 "popw %ax\n\t"
-		 "outb %al, $0xEB\n\t"
-		 "outb %al, %dx\n\t"	// delay
-		 "popa\n\t"
-		 "sti"
-		 );
-	*/
-	k_cls();
 }
 void set_font(void* font, int plane) {
 	unsigned int seg;
@@ -169,16 +105,21 @@ void set_cur (int x, int y, char delay) {
 	// If delay is 0, update console from cache only.
 	static char pos_hi=0, pos_lo=0; // data written to console
 	static char pos_cx=0, pos_cy=0; // data cached
+	static char up = 1;		// new data
 	static char force = 0x11;	// force write
 	if (delay) {
 		if (pos_cx == x && pos_cy == y)
 			return; // no sense in updating!
 		pos_cx = x;
 		pos_cy = y;
+		up = 1;
 	} else {
+		if (!force && !up)
+			return;
+		up = 0;
 		int np;
 		char nph, npl;
-		np = (pos_cy + vmem_base) * maxcol_p + pos_cx;
+		np = pos_cy * maxcol_p + pos_cx;
 		nph = ((np & 0xff00) >> 8);
 		npl = np & 0xff;
 		if (nph ^ pos_hi)
@@ -203,32 +144,21 @@ void set_cur (int x, int y, char delay) {
 	}
 }
 void scroll(int lines) {
-	//int l1 = 0, l2 = lines;
-	//while (l2 < maxrow) {
-	//	for (int i = 0; i < maxcol * 2; i++)
-	//		vmem[l1 * maxcol_p * 2 + i] = vmem[l2*maxcol_p*2 + i];
-	//	l1++;
-	//	l2++;
-	//}
+	int l1 = 0, l2 = lines;
+	while (l2 < maxrow) {
+		for (int i = 0; i < maxcol * 2; i++)
+			vmem[l1 * maxcol_p * 2 + i] = vmem[l2*maxcol_p*2 + i];
+		l1++;
+		l2++;
+	}
 
-	//while (l1 < maxrow) {
-	//	for (int i = 0; i < maxcol * 2; i+=2) {
-	//		vmem[l1 * maxcol_p * 2 + i] = ' ';
-	//		vmem[l1 * maxcol_p * 2 + i+1] = 0x07;
-	//	}
-	//	l1 ++;
-	//}
-	int reg = ((inb(0x3cc)&0x01)?0x3D4:0x3B4);
-	vmem_base += lines - 1;
-	vmem_base %= 199;
-	vmem_base++;
-	int vm2 = vmem_base * 80;
-	scroll_p += lines;
-	outb (reg, 0x0d); // start_low
-	outb (reg+1, vm2 & 0xff);
-	outb (reg, 0x0c); // start_high
-	outb (reg+1, (vm2 & 0xff00) >> 8);
-
+	while (l1 < maxrow) {
+		for (int i = 0; i < maxcol * 2; i+=2) {
+			vmem[l1 * maxcol_p * 2 + i] = ' ';
+			vmem[l1 * maxcol_p * 2 + i+1] = 0x07;
+		}
+		l1 ++;
+	}
 
 	VMEM_C(maxcol, scroll_p+1)[0] = (unsigned char)0xb1;
 	scroll_p += lines;
@@ -454,12 +384,9 @@ void k_cls() {
 
 	// status line
 	//vm2 = vmem + (maxcol_p * maxrow * 2);
-	// should be at 0
 	for (int s = 0; s < maxcol+1; s++) {
-		vmem[s*2] = ' ';
-		vmem[s*2 + 1] = (unsigned char) 0x1f;
-		//VMEM_C(s,-1)[0] = ' ';
-		//VMEM_C(s,-1)[1] = (unsigned char)0x1f;
+		VMEM_C(s,maxrow)[0] = ' ';
+		VMEM_C(s,maxrow)[1] = (unsigned char)0x1f;
 		//*vm2++ = ' ';
 		//*vm2++ = (unsigned char)0x1f;
 	}
@@ -474,10 +401,8 @@ void k_cls() {
 	VMEM_C(maxcol, 0)[0] = (unsigned char)0x1E;
 	VMEM_C(maxcol, maxrow-1)[0] = (unsigned char)0x1F;
 	//vm2 = vmem + (maxcol * maxrow * 2);
-	vmem[10] =  (unsigned char)0xb3;
-	vmem[22] = (unsigned char) 0xb3;
-	VMEM_C(5,  -1)[0] = (unsigned char)0xb3;
-	VMEM_C(11, -1)[0] = (unsigned char)0xb3;
+	VMEM_C(5,  maxrow)[0] = (unsigned char)0xb3;
+	VMEM_C(11, maxrow)[0] = (unsigned char)0xb3;
 	//vm2[10] = (unsigned char)0xb3;
 	//vm2[20] = (unsigned char)0xb3;
 }
