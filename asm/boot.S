@@ -37,15 +37,18 @@
 	out dx, al
 %endmacro
 
+MEM_POOL_LEN  equ  0x1000000    ; 16 MB
 ; headers {{{
 [global _start]
 [global _bkpt]
+[global apm_info]
 [global dbgb] ; unusual calling convention...
 [global dbgs]
 [global dbgr]
 [global INTCT]
 [extern crash]
 [global panic]
+[global powerdown]
 [extern dbg]
 [extern handlers]
 [extern idt_handle]
@@ -92,9 +95,10 @@ _start: ; {{{
 	push eax
 	push ebx
 	call init_idesc
+	mov [apm_info.valid], DWORD 0x00
 _bkpt:
 	;mov esp, stack+STACKSIZE
-
+	
 	lgdt [gdt_handle]
 	lidt [idt_handle]
 	mov ax, 0x10
@@ -162,6 +166,80 @@ panic: ; {{{
 	int 8
 	.tmp: dd 0xffffff,0xffffff
 ; }}}
+
+powerdown: ; {{{
+	cli
+	mov eax, DWORD [apm_info.valid]
+	cmp eax, 0x00
+	jnz .have_apm
+	hlt
+.have_apm:
+	mov ebp, GDT
+	add ebp, 0x18
+	mov ecx, [apm_info.cseglen]
+	mov edx, [apm_info.cseg]
+	mov bl, 0x40
+	mov eax, ecx
+	shr eax, 1
+	cmp eax, 0x7ffff
+	jl  .common1
+	mov bl, 0x60
+	shr ecx, 12
+.common1:
+	mov [ebp], cx
+	mov [ebp + 2], dx
+	ror edx, 16
+	ror ecx, 16
+	mov [ebp + 4], dl
+	mov al, 0x9a
+	mov [ebp + 5], al
+	mov al, cl
+	and al, 0x0f
+	or al, bl
+	mov [ebp+6], al
+	mov [ebp+7], dh
+	
+	add ebp, 0x08 ; dseg
+	
+	mov ecx, [apm_info.dseglen]
+	mov edx, [apm_info.dseg]
+	mov bl, 0x40
+	mov eax, ecx
+	shr eax, 1
+	cmp eax, 0x7ffff
+	jl  .common2
+	mov bl, 0x60
+	shr ecx, 12
+
+.common2:
+	mov [ebp], cx
+	mov [ebp + 2], dx
+	ror edx, 16
+	ror ecx, 16
+	mov [ebp + 4], dl
+	mov al, 0x92
+	mov [ebp + 5], al
+	mov al, cl
+	and al, 0x0f
+	or al, bl
+	mov [ebp+6], al
+	mov [ebp+7], dh
+
+	
+	mov edx, [apm_info.offset]
+	mov [.call+2], edx
+	mov ax, 0x20
+	mov ds, ax
+	mov ax, 0x5307	; apm set power state
+	mov bx, 0x0001	; all devices
+	mov cx, 0x0003	; power off
+	; o32 9A id iw
+	call DWORD far .call
+	call panic
+.call:	dw 0x18
+	dd 0x00
+; }}}
+
 prog_pic: ; {{{
 	nop 
 	push ebp
@@ -275,11 +353,37 @@ dbgs: ; {{{
 ;	ret
 ; }}}
 
-section .rodata
+apm_info:
+.version	TIMES 2 db 0
+.cseg		TIMES 2 db 0
+.offset		TIMES 4 db 0
+.csegn		TIMES 2 db 0
+.dseg		TIMES 2 db 0
+.flags		TIMES 2 db 0
+.cseglen	TIMES 2 db 0
+.csegnlen	TIMES 2 db 0
+.dseglen	TIMES 2 db 0
+.valid		TIMES 4 db 0
+;             +----------------------+
+;     0       | version              |
+;     2       | cseg                 |
+;     4       | offset               |
+;     8       | cseg_16              |
+;     10      | dseg                 |
+;     12      | flags                |
+;     14      | cseg_len             |
+;     16      | cseg_16_len          |
+;     18      | dseg_len             |
+;             +----------------------+
+
+section .data
 GDT: ; {{{
 	segdesc 0x0, 0x0, 0x0
 	segdesc 0x0, 0xffffffff, 0x9a
 	segdesc 0x0, 0xffffffff, 0x92
+%rep 13
+	segdesc 0x0, 0x0, 0x0
+%endrep
 	;	segdesc TSS0, TSS_LEN, 
 	; TSS later...
 	;dd 0x00000000, 0x00400000
@@ -304,7 +408,13 @@ rtst: db 'This is a stupid test', 0x0a, 0x00
 ; }}}
 section .bss ; {{{
 align 32
+
+
+align 32
 stack: ; {{{
    resb STACKSIZE      ; reserve 16k stack on a quadword boundary
+align 32
+kalloc_pool: 
+	resb MEM_POOL_LEN
 ; }}}
 ; }}}

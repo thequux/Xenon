@@ -1,7 +1,14 @@
 #!/bin/zsh
 # Features necessary: (format: feature <tab> features necessary for implementation)
+function ignore() {
+cat <<__EOF__ | sed -e 's/$/$/' -e 's/^/^/'
+all_ansi_codes
+.
+keyboard
+__EOF__
+}
 function src() {
-cat <<__EOF__
+cat <<__EOF__ | grep -v "^#"
 kalloc			bare_elf
 bare_elf		.
 all_ansi_codes		.
@@ -40,5 +47,5 @@ src | sed -e 's/$/ \a/' |sed -re 's/[ \t]+/\n/g' | ( while read x ; do
 	else
 		echo $c $x
 	fi
-done) | tsort
+done) | tsort | sed -e 's/$/$/' -e 's/^/^/' | fgrep -v -f =(ignore) |sed -e 's/^\^\(.*\)\$$/\1/'
 

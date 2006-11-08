@@ -4,6 +4,7 @@
 volatile unsigned char* vmem;
 void panic();
 int pft();
+void powerdown() __attribute__((noreturn));
 struct __attribute__ ((packed)) mb_mod {
 	void *start;
 	void *end;
@@ -52,7 +53,7 @@ struct __attribute__ ((packed)) mboot_info {
 	} drive_info;
 	void* config_table; // BIOS config table... if flags[8]
 	char* boot_loader_name; // the name of the bootloader... if flags[9]
-	struct { // apm info... if flags[10]
+	/*struct { // apm info... if flags[10]
 		short int version;
 		short int cseg;
 		int offset;
@@ -62,7 +63,8 @@ struct __attribute__ ((packed)) mboot_info {
 		short int cseg_len;
 		short int cseg_16_len;
 		short int dseg_len;
-	}* apm_table;
+	}* apm_table; */
+	struct apm_info_t *apm_table; // if flags[10]
 	struct { // vbe info... if flags[11]
 		int vbe_control_info;
 		int vbe_mode_info;
@@ -71,7 +73,19 @@ struct __attribute__ ((packed)) mboot_info {
 		short int vbe_interface_len; //THIS MAY BE 32 bits!
 	} vbe_info;
 };
+static void dbgb (char t) __attribute__ ((unused));
+static void dbgb (char t) {
+	if ((t >> 4) < 0x0a)
+		dbg((t >> 4) + '0');
+	else
+		dbg((t >> 4) + 'a' - 10);
 
+	if ((t & 0x0f) < 0x0a)
+		dbg((t & 0x0f) + '0');
+	else
+		dbg((t & 0x0f) + 'a' - 10);
+	
+}
 void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	init_serial();
 	vmem = (unsigned char*)0xB8000;
@@ -83,7 +97,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 		panic();
 	}
 	//k_printf("1");
-	if (mbd->flags & 0x4) { // module info
+	if (mbd->flags & 0x8) { // module info
 		k_swrite("modinfo\n", OUT_STD);
 		k_iwrite (mbd->module_info.mod_count, OUT_STD);
 		k_swrite("\n",OUT_STD);
@@ -105,11 +119,43 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 		//	spin(1000000);
 		
 	}
+	if (mbd->flags & 0x400) {
+		// apm avaliable...
+		apm_info.valid = ~ 0x0;
+		apm_info.version = mbd->apm_table->version;
+		apm_info.cseg = mbd->apm_table->cseg;
+		apm_info.offset = mbd->apm_table->offset;
+		apm_info.dseg = mbd->apm_table->dseg;
+		apm_info.flags = mbd->apm_table->flags;
+		apm_info.cseg_len = mbd->apm_table->cseg_len;
+		apm_info.cseg_16 = mbd->apm_table->cseg_16;
+		apm_info.cseg_16_len = mbd->apm_table->cseg_16_len;
+		apm_info.dseg_len = mbd->apm_table->dseg_len;
+	} else {
+		apm_info.valid = 0x00;
+	}
 	//
 	char *hex = "0123456789ABCDEF";
-	//char u;
-	//while (u=read_serial)
-	//	write_serial(u);
+	char u;
+	while ((u=read_serial())) {
+	switch (u) {
+		case 'b':
+		case 0x7f:
+			write_serial('\b');
+			write_serial(' ');
+			write_serial('\b');
+			break;
+		case '\x0d':
+			write_serial(0x0d);
+			write_serial(0x0a);
+			break;
+		case 0x03:
+			powerdown();
+			break;
+		default:
+			write_serial(u);
+	}
+	}
 	k_cls();
 //	for (int i = 0; i < 80*25*2; i+= 2) {
 //		vmem[i+1] = (unsigned char)0x20;

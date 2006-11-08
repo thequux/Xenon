@@ -1,4 +1,7 @@
+#ifndef XE_TARGET_CFG_H
+#define XE_TARGET_CFG_H
 // Defs
+
 #define DBG_NULL	0
 #define DBG_E9		1
 #define DBG_SERIAL	2
@@ -14,3 +17,5 @@
 #else
 #  error "Invalid target in config.h"
 #endif
+
+#endif // include guard

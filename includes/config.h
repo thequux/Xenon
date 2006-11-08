@@ -1,3 +1,5 @@
+#ifndef XE_CONFIG_H
+#define XE_CONFIG_H
 // Various target-specific features, such as debug ports, etc.
 #define TARGET_NATIVE	0
 #define TARGET_BOCHS	1
@@ -5,7 +7,7 @@
 
 #define TARGET	TARGET_QEMU
 
-#include "target_cfg.h"
+#include <target_cfg.h>
 
 //Overrides...
 
@@ -18,4 +20,4 @@
 // DBG_NULL turns dbg into a NOP
 //
 // #define DEBUG_OUT DBG_NULL
-
+#endif

@@ -1,4 +1,4 @@
-#include "ctools.h"
+#include <ctools.h>
 // this file stolen from OSFAQ, until further notice...
 #define PORT 0x3f8   /* ttyS0 */
 

@@ -1,9 +1,22 @@
+#ifndef XE_CTOOLS_H
+#define XE_CTOOLS_H
 /* output types */
 #define OUT_DBG 1
 #define OUT_STD 0
 
 #include "config.h"
+// Standard C defines; also, data types
 #define NULL ((void*)(0))
+#ifdef CPLUSPLUS
+#  define BOOL bool
+#  define TRUE true
+#  define FALSE false
+#else
+#  define BOOL char
+#  define FALSE (0)
+#  define TRUE  (! FALSE)
+#endif
+
 int strlen(void* str);
 
 void spin(unsigned long int cycles);
@@ -15,7 +28,33 @@ int strcmp (char* s1, char* s2);
 int strncmp(char* s1, char* s2, int n);
 
 void strrev(char* s);
+/*
+;             +----------------------+
+;     0       | version              |
+;     2       | cseg                 |
+;     4       | offset               |
+;     8       | cseg_16              |
+;     10      | dseg                 |
+;     12      | flags                |
+;     14      | cseg_len             |
+;     16      | cseg_16_len          |
+;     18      | dseg_len             |
+;             +----------------------+
+*/
+struct __attribute__((packed)) apm_info_t {
+	short version;
+	short cseg;
+	unsigned int offset;
+	unsigned short cseg_16;
+	unsigned short dseg;
+	unsigned short flags;
+	unsigned short cseg_len;
+	unsigned short cseg_16_len;
+	unsigned short dseg_len;
+	unsigned int valid;
+};
 
+extern struct apm_info_t apm_info;
 // serial I/O...
 void init_serial();
 char read_serial();
@@ -37,4 +76,4 @@ static __inline__ unsigned char inb(unsigned short port)
    return ret;
 }
 
-
+#endif

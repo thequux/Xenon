@@ -1,6 +1,6 @@
-#include "ctools.h"
-#include "video.h"
-#include "kqueue.h"
+#include <ctools.h>
+#include <video.h>
+#include <kqueue.h>
 #define GRAPHICS_ADDR_REG 0x3CE
 #define GRAPHICS_DATA_REG 0x3CF
 #define SEQ_ADDR_REG		0x3C4
@@ -11,6 +11,7 @@ static int gattr;
 extern volatile unsigned char* vmem;
 //extern unsigned char font[];
 int scroll_p;
+
 void* get_vmem_base () {
 	char gc6;
 	outb (GRAPHICS_ADDR_REG, 0x06);
