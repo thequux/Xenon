@@ -1,3 +1,5 @@
 include std-defs.mk
-
+OBJS	:= boot.o handlers.o 
 boot.o: rmhalt.bin rmswitch.bin
+
+

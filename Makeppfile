@@ -1,4 +1,6 @@
 VERBOSE=
+$(phony default): boot.img
+
 include std-defs.mk
 prebuild += tools/ccdv
 
@@ -16,7 +18,7 @@ tools/ccdv: tools/ccdv.c
 krnl-s: krnl
 	@ccdv objcopy -g krnl krnl-s
 
-krnl: asm/boot.o misc/main.o misc/support.o asm/handlers.o hardware/kbd.o hardware/serial.o hardware/io.o hardware/console.o misc/kqueue.o misc/printf.o
+krnl: asm/built-in.o misc/built-in.o hardware/built-in.o
 	@ccdv ld  $(LDFLAGS) -o $@ $^ -Map krnl.map
 	@ccdv tools/map2sym.sh krnl.map krnl.sym
 

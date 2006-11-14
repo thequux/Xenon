@@ -1,5 +1,6 @@
 #include "ctools.h"
 #include "video.h"
+#include <kalloc.h>
 //#define VMMMMEM_C(x,y)  (vmem+(((y)*80+(x))*2))
 volatile unsigned char* vmem;
 void panic();
@@ -138,6 +139,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	//
 	char *hex = "0123456789ABCDEF";
 	char u;
+	kalloc_init();
 	while ((u=read_serial())) {
 	switch (u) {
 		case 'b':

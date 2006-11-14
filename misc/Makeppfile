@@ -1,2 +1,3 @@
 include std-defs.mk
+OBJS	:= kqueue.o printf.o main.o support.o kalloc.o
 kqueue.o: ../includes/kqueue_impl.h kqueue_gen.c kqueue_impl.c

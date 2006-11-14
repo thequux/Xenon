@@ -93,6 +93,8 @@ MEM_POOL_LEN  equ  0x1000000    ; 16 MB
 [extern handlers]
 [extern idt_handle]
 [extern init_idesc]
+[global kalloc_len]
+[global kalloc_pool]
 [BITS 32]
 [extern k_main] ; this is in the C source as k_main
 ; }}}
@@ -151,53 +153,27 @@ _bkpt:
 	.nxt:
 	;hlt
 	call prog_pic
-	
 	sti
-	;outb 0x3f9, 0x00
-	;outb 0x3fb, 0x80
-	;outb 0x3f8, 0x03
-	;outb 0x3f1, 0x00
-	;outb 0x3fb, 0x03
-	;outb 0x3fa, 0xc7
-	;outb 0x3fc, 0x0b
-
-	;.tmp:
-	;mov dx, 0x3fd
-	;in al, dx
-	;test al, 0x20
-	;jz .tmp
-
-	;outb 0x3f8, '.'
-	;jmp .tmp
-
-	;hlt
-;.tst	nop
-	;mov al, '.'
-	;push eax
-	;call dbg
-	;add esp, BYTE 4
-
-	;jmp .tst
-	;int 7
-	;int 8
-	;push eax	
-	;push ebx
 	call k_main	; start C
 	.tst:
 	hlt
-	;mov al, '.'
-	;out 0xe9, al
 	jmp .tst
-	jmp 0
-	call dbgr
+	cli
+	pusha
+
+	push .panic_msg
+	call dbgs
+	add esp, BYTE 4
+	call panic.bare
 	cli
 	
 	hlt
+.panic_msg: db 'WTF, mate? I just fell out of an infinite loop!', 0x0d, 0x0a, 0x00
 ; }}}
 panic: ; {{{
 	cli
 	pusha
-
+.bare:
 	jmp crash
 	; if I get here, I'm really screwed.
 	; Just triple fault.
@@ -259,49 +235,6 @@ powerdown: ; {{{
 .gdtd	dw .rmgdtl
 	dd .rmgdt
 .dest	dd 0x00,0x08
-	mov ebp, GDT
-	add ebp, 0x18
-	mov cx, [apm_info.cseglen]
-	movzx dx, [apm_info.cseg]
-	rol edx, 4
-	mov [ebp], cx
-	mov [ebp + 2], dx
-	ror edx, 16
-	mov [ebp + 4], dl
-	mov al, 0x9a
-	mov [ebp + 5], al
-	mov al, 0x40
-	mov [ebp+6], al
-	mov [ebp+7], byte 0
-	
-	add ebp, 0x08 ; dseg
-	
-	mov cx, [apm_info.dseglen]
-	movzx dx, [apm_info.dseg]
-	shl edx, 4
-	mov [ebp], cx
-	mov [ebp + 2], dx
-	ror edx, 16
-	mov [ebp + 4], dl
-	mov al, 0x92
-	mov [ebp + 5], al
-	mov al, 0x40
-	mov [ebp+6], al
-	mov [ebp+7], dh
-
-	
-	mov edx, [apm_info.offset]
-	mov [.call+1], edx
-	mov ax, 0x20
-	mov ds, ax
-	mov ax, 0x5307	; apm set power state
-	mov bx, 0x0001	; all devices
-	mov cx, 0x0003	; power off
-	; o32 9A id iw
-.call:	call 0x18:0x12345678 
-	call panic
-	dw 0x18
-	dd 0x00
 ; }}}
 
 .rm:	incbin 'rmswitch.bin'	; this file contains a crapload of 16-bit code
@@ -474,13 +407,11 @@ TIMES 11 dd 0x00
 TIMES 8  dd 0x00
 TSS_LEN equ $-TSS0
 ; }}}
-
+kalloc_len:
+	dd MEM_POOL_LEN
 rtst: db 'This is a stupid test', 0x0a, 0x00
 ; }}}
 section .bss ; {{{
-align 32
-
-
 align 32
 stack: ; {{{
    resb STACKSIZE      ; reserve 16k stack on a quadword boundary

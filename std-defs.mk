@@ -19,3 +19,6 @@ LDFLAGS		:= -T link.ld -z defs -nostdlib
 
 %.o:%.c
 	@$(CC) $(CFLAGS) -c $<
+
+built-in.o: $(OBJS)
+	ld -r -nostdlib -o $(output) $(inputs)
