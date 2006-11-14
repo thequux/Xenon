@@ -420,4 +420,12 @@ int pft(void)
 	printf("<%-8s> and <%8s> justified strings\n", "left", "right");
 	return 0;
 }
+
+// from legacy assembly code
+void dbgs(char* s) {
+	s--;
+	while (*(++s))
+		dbg(*s);
+}
+
 #endif

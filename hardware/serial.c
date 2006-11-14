@@ -2,7 +2,10 @@
 // this file stolen from OSFAQ, until further notice...
 #define PORT 0x3f8   /* ttyS0 */
 
+static char msg[] = "\e[2J\e[1;1H/dev/ttyS0 ready\r\n";
+
 void init_serial() {
+   char* lmsg;
    outb(PORT + 1, 0x00);    // Disable all interrupts
    outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
    outb(PORT + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
@@ -10,6 +13,10 @@ void init_serial() {
    outb(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
    outb(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
    outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+   
+   lmsg = msg - 1;
+   while (*(++lmsg))
+   	write_serial(*lmsg);
 }
 
 int serial_recieved() {

@@ -131,6 +131,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 		apm_info.cseg_16 = mbd->apm_table->cseg_16;
 		apm_info.cseg_16_len = mbd->apm_table->cseg_16_len;
 		apm_info.dseg_len = mbd->apm_table->dseg_len;
+		printf("CSEG: %x\nCSEG_LEN: %x\nOFFSET: %x\n", apm_info.cseg, apm_info.cseg_len, apm_info.offset);
 	} else {
 		apm_info.valid = 0x00;
 	}

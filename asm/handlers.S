@@ -418,6 +418,12 @@ int_05 : ; {{{3
 int_06 : ; {{{3
 	cli
 	pusha
+		mov ebp, esp
+		push DWORD .err
+		call dbgs
+		mov esp, ebp
+		jmp crash
+
 		mov al, '0'
 		push DWORD eax
 		call dbg
@@ -430,6 +436,7 @@ int_06 : ; {{{3
 		push DWORD eax
 		call dbg
 		add esp, BYTE 4
+		.err db 'Invalid opcode!', 0x0d, 0x0a, 0x00
 	popa
 	sti
 	iret

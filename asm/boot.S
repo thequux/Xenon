@@ -1,3 +1,42 @@
+%if 0
+format ELF
+
+macro segdesc base limit type
+{
+	local gran
+	if (limit rsh 1) > 0x7ffff
+		if (limit and 0xfff) != 0xfff
+			display 'Segment limit is invalid', 13, 10
+		end if
+		gran = 0x60
+		limit = (limit rsh 12)
+	else
+		gran = 0x40
+	end if
+	db  ((limit       ) and 0xff)
+	db  ((limit rsh  8) and 0xff)
+	db  ((base        ) and 0xff)
+	db  ((base  rsh  8) and 0xff)
+	db  ((base  rsh 16) and 0xff)
+	db  ((type        ) and 0xff)
+	db (((limit rsh 16) and 0x0f) or gran)
+	db  ((base  rsh 24) and 0xff)
+}
+
+maxro outb value port
+{
+	mov al, %2
+	if port < 0xff
+		out port, al
+	else
+		mov dx, port
+		out dx, al
+	end if
+}
+
+if 0
+%endif
+
 %macro segdesc 3.nolist	; segd base limit type {{{
 	%assign type %3			; type is 0bP-DPL-S-Type
 					; P: present
@@ -37,13 +76,14 @@
 	out dx, al
 %endmacro
 
+
 MEM_POOL_LEN  equ  0x1000000    ; 16 MB
 ; headers {{{
 [global _start]
 [global _bkpt]
 [global apm_info]
 [global dbgb] ; unusual calling convention...
-[global dbgs]
+[extern dbgs]
 [global dbgr]
 [global INTCT]
 [extern crash]
@@ -172,73 +212,103 @@ powerdown: ; {{{
 	mov eax, DWORD [apm_info.valid]
 	cmp eax, 0x00
 	jnz .have_apm
+	push .noapm
+	call dbgs
 	hlt
 .have_apm:
+	push .apmmsg
+	call dbgs
+	;
+	; switch to real mode, and do the deed.
+	mov ebx, .rm
+	add ebx, 0x1000
+	sub ebx, .halt
+	mov edi, ebx
+	
+	mov esi, .rm
+	
+	mov ecx, .halt
+	sub ecx, .rm
+	add ecx, 0x100
+
+.cp:	mov al, [esi]
+	mov [edi], al
+	inc esi
+	inc edi
+	loop .cp
+
+	lidt [.rmidt]
+	lgdt [.gdtd]
+.dojmp:
+	jmp 0x0008:(0x1000+.rm-.halt)
+	;mov edi, (0x1000-.halt+.rm)
+	;mov ecx, (.halt-.rm)
+	;add ecx, 0x100
+	;rep movsb
+.apmmsg: db 'APM found... doing real-mode call', 0x0d, 0x0a, 0x00
+.noapm:  db 'APM not found... halting without interrupts', 0x0d, 0x0a, 0x00
+
+; tables and other misc junk
+.rmidt	dw 0x3ff
+	db 0
+	;  0x00000000, 0x00000000
+.rmgdt	dd 0x00000000, 0x00000000
+	dd 0x0000ffff, 0x00009a00
+	dd 0x0100ffff, 0x00009200
+.rmgdtl equ ($ - .rmgdt - 1)
+.gdtd	dw .rmgdtl
+	dd .rmgdt
+.dest	dd 0x00,0x08
 	mov ebp, GDT
 	add ebp, 0x18
-	mov ecx, [apm_info.cseglen]
-	mov edx, [apm_info.cseg]
-	mov bl, 0x40
-	mov eax, ecx
-	shr eax, 1
-	cmp eax, 0x7ffff
-	jl  .common1
-	mov bl, 0x60
-	shr ecx, 12
-.common1:
+	mov cx, [apm_info.cseglen]
+	movzx dx, [apm_info.cseg]
+	rol edx, 4
 	mov [ebp], cx
 	mov [ebp + 2], dx
 	ror edx, 16
-	ror ecx, 16
 	mov [ebp + 4], dl
 	mov al, 0x9a
 	mov [ebp + 5], al
-	mov al, cl
-	and al, 0x0f
-	or al, bl
+	mov al, 0x40
 	mov [ebp+6], al
-	mov [ebp+7], dh
+	mov [ebp+7], byte 0
 	
 	add ebp, 0x08 ; dseg
 	
-	mov ecx, [apm_info.dseglen]
-	mov edx, [apm_info.dseg]
-	mov bl, 0x40
-	mov eax, ecx
-	shr eax, 1
-	cmp eax, 0x7ffff
-	jl  .common2
-	mov bl, 0x60
-	shr ecx, 12
-
-.common2:
+	mov cx, [apm_info.dseglen]
+	movzx dx, [apm_info.dseg]
+	shl edx, 4
 	mov [ebp], cx
 	mov [ebp + 2], dx
 	ror edx, 16
-	ror ecx, 16
 	mov [ebp + 4], dl
 	mov al, 0x92
 	mov [ebp + 5], al
-	mov al, cl
-	and al, 0x0f
-	or al, bl
+	mov al, 0x40
 	mov [ebp+6], al
 	mov [ebp+7], dh
 
 	
 	mov edx, [apm_info.offset]
-	mov [.call+2], edx
+	mov [.call+1], edx
 	mov ax, 0x20
 	mov ds, ax
 	mov ax, 0x5307	; apm set power state
 	mov bx, 0x0001	; all devices
 	mov cx, 0x0003	; power off
 	; o32 9A id iw
-	call DWORD far .call
+.call:	call 0x18:0x12345678 
 	call panic
-.call:	dw 0x18
+	dw 0x18
 	dd 0x00
 ; }}}
+
+.rm:	incbin 'rmswitch.bin'	; this file contains a crapload of 16-bit code
+				; to be shoved into memory so that it ends at 0x1000
+.halt:	incbin 'rmhalt.bin'	; to be loaded at 0x1000. 0x100 bytes max.
+
+times (0x100+.halt-$) db 0x00
 
 prog_pic: ; {{{
 	nop 
@@ -327,7 +397,8 @@ dbgr: ; {{{
 	leave
 	ret
 ; }}}
-dbgs: ; {{{
+dbgs_old: ; {{{
+	
 	push ebp
 	mov ebp, esp
 	sub esp, 4

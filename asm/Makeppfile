@@ -1,2 +1,3 @@
 include std-defs.mk
 
+boot.o: rmhalt.bin rmswitch.bin
