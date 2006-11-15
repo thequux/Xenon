@@ -1,7 +1,7 @@
-%if 0
+%if 0 ; {{{
 format ELF
 
-macro segdesc base limit type
+macro segdesc base limit type ; {{{
 {
 	local gran
 	if (limit rsh 1) > 0x7ffff
@@ -22,8 +22,8 @@ macro segdesc base limit type
 	db (((limit rsh 16) and 0x0f) or gran)
 	db  ((base  rsh 24) and 0xff)
 }
-
-maxro outb value port
+; }}}
+maxro outb value port ; {{{
 {
 	mov al, %2
 	if port < 0xff
@@ -33,51 +33,16 @@ maxro outb value port
 		out dx, al
 	end if
 }
-
+; }}}
 if 0
-%endif
-
-%macro segdesc 3.nolist	; segd base limit type {{{
-	%assign type %3			; type is 0bP-DPL-S-Type
-					; P: present
-					; DPL: Descriptor privelege level
-					; S: 0: system, 1: code/data
-					; Type: See 3A-97
-
-	%assign limit %2
-	%assign base %1
-	; %error limit
-	%if (limit >> 1) > 0x7ffff 
-		%if (limit & 0xfff) != 0xfff
-			%error Segment limit is invalid on line __LINE__
-		%endif
-		%assign gran 0xc0	; megatokyo says this should be 0x60..
-					; but the manual (3A-94) says 0xc0.
-					; Check this. (D/B + G)
-		%assign limit (limit >> 12)
-	%else
-		%assign gran 0x40
-		%assign limit limit
-	%endif
-	db  ((limit      ) & 0xff)
-	db  ((limit >> 8 ) & 0xff)
-	db  ((base       ) & 0xff)
-	db  ((base  >> 8 ) & 0xff)
-	db  ((base  >> 16) & 0xff)
-	db  ((type       ) & 0xff) 
-	db (((limit >> 16) & 0xf )  \
-	    | gran )
-	db  ((base  >> 24) & 0xff)
-%endmacro ; }}}
-
-%macro outb 2.nolist
+%endif 
+; }}}
+%macro outb 2.nolist ; {{{
 	mov dx, %1
 	mov al, %2
 	out dx, al
 %endmacro
-
-
-MEM_POOL_LEN  equ  0x1000000    ; 16 MB
+; }}}
 ; headers {{{
 [global _start]
 [global _bkpt]
@@ -95,45 +60,19 @@ MEM_POOL_LEN  equ  0x1000000    ; 16 MB
 [extern init_idesc]
 [global kalloc_len]
 [global kalloc_pool]
+[extern apm_info.valid]
+[extern gdt_handle]
+[extern STACK_TOP]
 [BITS 32]
 [extern k_main] ; this is in the C source as k_main
 ; }}}
 PIC_IRQ_BASE equ 0x20
-; multiboot {{{
-; 	defines {{{
-MODULEALIGN equ  1<<0                   ; align loaded modules on page boundaries
-MEMINFO     equ  1<<1                   ; provide memory map
-FLAGS       equ  MODULEALIGN | MEMINFO  ; this is the Multiboot 'flag' field
-MAGIC       equ    0x1BADB002           ; 'magic number' lets bootloader find the header
-CHECKSUM    equ -(MAGIC + FLAGS)        ; checksum required
-; 	}}}
-align 4
-jmp _start
-align 4
-mbheader: 
-;  multiboot header {{{
-;     basic {{{
-	dd MAGIC	; magic
-	dd FLAGS	; flags (1+2+16; give mem,mmap; vidmode; I specify load offsets)
-	dd CHECKSUM	; checksum
-STACKSIZE equ 0x4000          ; that's 16k.
-;	 	}}}
-;     address fields {{{
-times 5	dd 0x00000000 	; address fields
-; 		}}}
-;     video fields {{{
-	dd 0x00000001	; EGA text mode
-	dd 80, 25	; 80 rows, 25 cols
-	dd 0		; depth - unused for text
-;		}}}
-; 	}}}
-; }}}
 section .text ; {{{
 _start: ; {{{
 	cli
 	;hlt
 	;jmp _start
-	mov esp, stack+STACKSIZE
+	mov esp, STACK_TOP
 	push eax
 	push ebx
 	call init_idesc
@@ -182,7 +121,6 @@ panic: ; {{{
 	int 8
 	.tmp: dd 0xffffff,0xffffff
 ; }}}
-
 powerdown: ; {{{
 	cli
 	mov eax, DWORD [apm_info.valid]
@@ -235,14 +173,12 @@ powerdown: ; {{{
 .gdtd	dw .rmgdtl
 	dd .rmgdt
 .dest	dd 0x00,0x08
-; }}}
 
 .rm:	incbin 'rmswitch.bin'	; this file contains a crapload of 16-bit code
 				; to be shoved into memory so that it ends at 0x1000
 .halt:	incbin 'rmhalt.bin'	; to be loaded at 0x1000. 0x100 bytes max.
-
 times (0x100+.halt-$) db 0x00
-
+; }}}
 prog_pic: ; {{{
 	nop 
 	push ebp
@@ -278,11 +214,6 @@ prog_pic: ; {{{
 	out 0x40, al
 	leave
 	ret
-; }}}
-; tools {{{
-gdt_handle:
-	dw GDT_LEN
-	dd GDT
 ; }}}
 dbgb: ; {{{
 	; al: byte to output
@@ -357,66 +288,4 @@ dbgs_old: ; {{{
 ;	ret
 ; }}}
 
-apm_info:
-.version	TIMES 2 db 0
-.cseg		TIMES 2 db 0
-.offset		TIMES 4 db 0
-.csegn		TIMES 2 db 0
-.dseg		TIMES 2 db 0
-.flags		TIMES 2 db 0
-.cseglen	TIMES 2 db 0
-.csegnlen	TIMES 2 db 0
-.dseglen	TIMES 2 db 0
-.valid		TIMES 4 db 0
-;             +----------------------+
-;     0       | version              |
-;     2       | cseg                 |
-;     4       | offset               |
-;     8       | cseg_16              |
-;     10      | dseg                 |
-;     12      | flags                |
-;     14      | cseg_len             |
-;     16      | cseg_16_len          |
-;     18      | dseg_len             |
-;             +----------------------+
 
-section .data
-GDT: ; {{{
-	segdesc 0x0, 0x0, 0x0
-	segdesc 0x0, 0xffffffff, 0x9a
-	segdesc 0x0, 0xffffffff, 0x92
-%rep 13
-	segdesc 0x0, 0x0, 0x0
-%endrep
-	;	segdesc TSS0, TSS_LEN, 
-	; TSS later...
-	;dd 0x00000000, 0x00400000
-	;dd 0x0000ffff, 0x006f9a00
-	;dd 0x0000ffff, 0x006f9200
-	GDT_LEN equ ($-GDT-1)
-; }}}
-INTCT: dd 0x00
-TSS0: ; {{{
-	;db 0xff,0xff,0x00,0x00,0x00,0x9a,0x6f,0x00
-	dd 0x00
-%rep 3
-	dd stack+STACKSIZE
-	dw 0x00, 0x10
-%endrep
-TIMES 11 dd 0x00
-TIMES 8  dd 0x00
-TSS_LEN equ $-TSS0
-; }}}
-kalloc_len:
-	dd MEM_POOL_LEN
-rtst: db 'This is a stupid test', 0x0a, 0x00
-; }}}
-section .bss ; {{{
-align 32
-stack: ; {{{
-   resb STACKSIZE      ; reserve 16k stack on a quadword boundary
-align 32
-kalloc_pool: 
-	resb MEM_POOL_LEN
-; }}}
-; }}}

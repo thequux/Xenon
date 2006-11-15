@@ -1,7 +1,10 @@
 SECTIONS
 {
     . = 0x00100000;
-
+    .mbheader ALIGN (0x04) :
+    {
+    	*(.mbheader)
+    }
     .text :
     {
         *(.text)

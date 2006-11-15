@@ -71,3 +71,22 @@ void kalloc_init() {
 		blk_sz, blk_sfx,
 		alloc_tbl_overhead);
 }
+
+void* kalloc (int count) {
+	int contig = 0;
+	int base = 0;
+	for (int i = alloc_tbl_overhead; i < block_count; i++) {
+		if (! alloc_tbl[i].free) {
+			if (!contig)
+				base = i;
+			contig ++;
+		} else {
+			contig = 0;
+		}
+		if (contig >= count) break;
+	}
+	for (int i = base; i < count; i++) 
+		alloc_tbl[i].free = FALSE;
+	return alloc_tbl[base].addr;
+}
+

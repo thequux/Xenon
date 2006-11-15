@@ -18,8 +18,8 @@ tools/ccdv: tools/ccdv.c
 krnl-s: krnl
 	@ccdv objcopy -g krnl krnl-s
 
-krnl: asm/built-in.o misc/built-in.o hardware/built-in.o
-	@ccdv ld  $(LDFLAGS) -o $@ $^ -Map krnl.map
+krnl: asm/built-in.o misc/built-in.o hardware/built-in.o link.ld
+	@ccdv ld  $(LDFLAGS) -o $@ $(filter-out link.ld, $^) -Map krnl.map
 	@ccdv tools/map2sym.sh krnl.map krnl.sym
 
 $(phony clean):
