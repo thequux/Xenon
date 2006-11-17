@@ -37,6 +37,7 @@ char *cnv_progname = "PSF2RAW";
 /* Return NULL if OK, else error string */
 char *cnv_set_option(int ddash, char *variable, char *value)
 {
+	(void) ddash;
 	if (!stricmp(variable, "first"))  { first = atoi(value); return NULL; }
 	if (!stricmp(variable, "last"))   { last = atoi(value); return NULL; }
 	if (!stricmp(variable, "256"))    { first = 0; last = 255; return NULL; }
@@ -92,7 +93,7 @@ char *cnv_execute(FILE *infile, FILE *outfile)
 		fprintf(stderr, "Warning: Font is wider than 8 bits.\n");
 
 	f = (first >= 0) ? first : 0;
-	l = (last  >= 0) ? last  : (psf.psf_length - 1);
+	l = (last  >= 0) ? last  :((int)(psf.psf_length - 1));
 	if (codepage && l >= 256) l = 255;
 	if (l >= psf.psf_length) l = psf.psf_length;
 	if (psf.psf_height > 32 && padded) 

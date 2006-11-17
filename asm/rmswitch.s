@@ -10,4 +10,10 @@
 	wbinvd
 f:	and	al,	0x10
 	mov	cr0,	eax
+	mov	ax,	0x1000
+	mov	ss,	ax
+	mov	ds,	ax
+	mov	es,	ax
+	mov	fs,	ax
+	mov	gs,	ax
 	jmp  0x0100:0x0000

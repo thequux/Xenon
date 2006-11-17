@@ -5,7 +5,7 @@
 #define TARGET_BOCHS	1
 #define TARGET_QEMU	2
 
-#define TARGET	TARGET_QEMU
+#define TARGET	TARGET_NATIVE
 
 #include <target_cfg.h>
 
@@ -18,6 +18,6 @@
 // DBG_E9 sends debugging stuff to hardware port E9
 // DBG_SERIAL uses ttyS0 (or COM1)
 // DBG_NULL turns dbg into a NOP
-//
+// DBG_VGA uses VGA output.
 // #define DEBUG_OUT DBG_NULL
 #endif

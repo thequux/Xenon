@@ -1,4 +1,4 @@
-MEM_POOL_LEN  equ  0x1800000    ; 16 MB
+MEM_POOL_LEN  equ  0x0220000    ; 16 MB
 STACKSIZE equ 0x4000          ; that's 16k.
 ; STACK_TOP equ stack+STACKSIZE
 [global STACK_TOP]
@@ -7,6 +7,7 @@ STACKSIZE equ 0x4000          ; that's 16k.
 [global gdt_handle]
 [global kalloc_pool]
 [global kalloc_len]
+[extern _ebss]
 
 %macro segdesc 3.nolist	; segd base limit type {{{
 	%assign type %3			; type is 0bP-DPL-S-Type
@@ -100,14 +101,19 @@ kalloc_len:
 	dd MEM_POOL_LEN
 rtst: db 'This is a stupid test', 0x0a, 0x00
 ; }}}
+kalloc_pool: dd _ebss ;kalloc_pool_save
 section .bss ; {{{
+align 4096
+kpdb:	resb 4096
+kpt0:	resb 4096
+
 align 32
 stack: ; {{{
    resb STACKSIZE      ; reserve 16k stack on a quadword boundary
 ; }}}
 STACK_TOP equ ($-1)
 
-kalloc_pool: ; {{{
-	resb MEM_POOL_LEN
+;kalloc_pool_save: ; {{{
+;	resb MEM_POOL_LEN
 ; }}}
 ; }}}

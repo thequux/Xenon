@@ -139,7 +139,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	//
 	char *hex = "0123456789ABCDEF";
 	char u;
-	kalloc_init();
+	//kalloc_init();
 	while ((u=read_serial())) {
 	switch (u) {
 		case 'b':

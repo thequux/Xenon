@@ -2,6 +2,6 @@
 title std
 	root (fd0)
 	kernel /boot/krnl-1
-	module (hd0,1)/ter-i16n.raw font 0
-	module (hd0,1)/ter-i16f.raw font 1
+#	module (hd0,1)/ter-i16n.raw font 0
+#	module (hd0,1)/ter-i16f.raw font 1
 	boot

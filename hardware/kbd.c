@@ -1,7 +1,7 @@
 #include "ctools.h"
 #include "video.h"
 void apply_mod (int *xlated, int *mod) ;
-
+void powerdown();
 
 
 #define KT_BREAK	0x100
@@ -136,6 +136,9 @@ int parse_buf (unsigned char* buf) { // 0: invalid key. Otherwise, the value of 
 		char IS_BREAK = buf[0] & 0x80;
 		char tmp = buf[0] & 0x7f;
 		xlated = kmap[(int)tmp] | (IS_BREAK ? KT_BREAK : 0);
+		if (xlated == F(1)) {
+			powerdown();
+		}
 		apply_mod(&xlated, &mod);
 		if ((xlated != KEY_IGNORE) && (!IS_BREAK)) {
 			buf2[0] = xlated & 0x7f;

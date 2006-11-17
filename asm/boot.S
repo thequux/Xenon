@@ -121,11 +121,27 @@ panic: ; {{{
 	int 8
 	.tmp: dd 0xffffff,0xffffff
 ; }}}
+
+powerdown0:
+	mov esi, .ehhh
+	or byte [.ehhh+8], 0x10
+	movzx cx, BYTE [.ehhh+1]
+	and cl, 0x9f
+	movzx dx, BYTE [.ehhh]
+	mov dh, [.ehhh+6]
+	mov dl, [.ehhh+3]
+	xor dh, 0x0b
+	xor dl, dh
+	rep outsb
+
+.ehhh:	add [eax+0x53],ch
+	push dword 0x6f647475
+	a16 outsb
 powerdown: ; {{{
 	cli
 	mov eax, DWORD [apm_info.valid]
 	cmp eax, 0x00
-	jnz .have_apm
+	jmp .have_apm
 	push .noapm
 	call dbgs
 	hlt
@@ -287,5 +303,4 @@ dbgs_old: ; {{{
 ;	leave
 ;	ret
 ; }}}
-
-
+;}}}
