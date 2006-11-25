@@ -57,8 +57,8 @@ struct __attribute__((packed)) apm_info_t {
 extern struct apm_info_t apm_info;
 // serial I/O...
 void init_serial();
-char read_serial();
-void write_serial(char a);
+char read_serial(int port);
+void write_serial(int port, char a);
 
 // IO ports...
 //void outb (short unsigned int port, unsigned char byte);
@@ -73,6 +73,18 @@ static __inline__ unsigned char inb(unsigned short port)
 {
    unsigned char ret;
    __asm__ volatile ("inb %1,%0":"=a"(ret):"Nd"(port));
+   return ret;
+}
+
+static __inline__ void outl(unsigned short port, unsigned int val)
+{
+   __asm__ volatile("outl %0,%1"::"a"(val), "Nd" (port));
+}
+
+static __inline__ unsigned int inl(unsigned short port)
+{
+   unsigned int ret;
+   __asm__ volatile ("inl %1,%0":"=a"(ret):"Nd"(port));
    return ret;
 }
 

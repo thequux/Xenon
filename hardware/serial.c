@@ -3,46 +3,52 @@
 #define PORT 0x3f8   /* ttyS0 */
 
 static char msg[] = "\e[2J\e[1;1H/dev/ttyS0 ready\r\n";
-
+static int ser_ports[] = {0x3f8, 0x2f8, 0x3e8, 0x2e8 };
+void init_serial_real(int port) {
+	char* lmsg;
+	int ioport = ser_ports[port];
+	msg[19] = ((char)port) + '0';
+	outb(ioport + 1, 0x00);    // Disable all interrupts
+	outb(ioport + 3, 0x80);    // Enable DLAB (set baud rate divisor)
+	outb(ioport + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
+	outb(ioport + 1, 0x00);    //                  (hi byte)
+	outb(ioport + 3, 0x03);    // 8 bits, no parity, one stop bit
+	outb(ioport + 2, 0xc7);    // Enable FIFO, clear them, with 14-byte threshold
+	outb(ioport + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+	outb(ioport + 1, 0x01);
+	lmsg = msg - 1;
+	//while (*(++lmsg))
+	//	write_serial(port, *lmsg);
+}
 void init_serial() {
-   char* lmsg;
-   outb(PORT + 1, 0x00);    // Disable all interrupts
-   outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
-   outb(PORT + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
-   outb(PORT + 1, 0x00);    //                  (hi byte)
-   outb(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
-   outb(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
-   outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
-   
-   lmsg = msg - 1;
-   while (*(++lmsg))
-   	write_serial(*lmsg);
+   init_serial_real (0);
+   init_serial_real (1);
 }
 
-int serial_recieved() {
-   return inb(PORT + 5) & 1;
+int serial_recieved(int port) {
+   return inb(ser_ports[port] + 5) & 1;
 }
 
-char read_serial() {
+char read_serial(int port) {
 
-   while (serial_recieved() == 0) {
+   while (serial_recieved(port) == 0) {
       continue;
    }
 
-   return inb(PORT);
+   return inb(ser_ports[port]);
 }
 
-int is_transmit_empty() {
-   return inb(PORT + 5) & 0x20;
+int is_transmit_empty(int port) {
+   return inb(ser_ports[port] + 5) & 0x20;
 }
 
-void write_serial(char a) {
+void write_serial(int port, char a) {
 
-   while (is_transmit_empty() == 0) {
+   while (is_transmit_empty(port) == 0) {
       continue;
    }
 
-   outb(PORT,a);
+   outb(ser_ports[port],a);
 
 }
 
@@ -50,7 +56,7 @@ void write_serial(char a) {
 //
 // No really, from here on, it's mine.
 
-void ser_out (unsigned char b) {
+void ser_ou_t (unsigned char b) {
 	while ((inb (0x3fd) & 0x20) == 0)
 		;
 	outb(0x3f8, b);

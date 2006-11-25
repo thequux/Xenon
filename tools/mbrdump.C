@@ -17,8 +17,8 @@ struct ptable
 	unsigned char endhead;  /* ending head number */
 	unsigned char endsect;  /* ending sector number */
 	unsigned char endcyl;   /* also a 10 bit nmbr, with same high 2 bit trick */
-	int relsect;            /* first sector relative to start of disk */
-	int numsect;            /* number of sectors in partition */
+	unsigned int relsect;            /* first sector relative to start of disk */
+	unsigned int numsect;            /* number of sectors in partition */
 } __attribute__((packed)) ;
 struct sector {
 	char pad[446];
@@ -34,13 +34,15 @@ int main(int argc, char** argv) {
 	if (dsk == (sector*)(void*)(-1)) perror("mmap");
 	assert(sizeof(sector) == 512);
 	for(int x = 0; x<4; x++) {
-		printf("%d: %c %d %d\t\tmount -o loop,offset=%d,sizelimit=%d %s   /\n",
+		printf("%d: %c %u %u\t\tmount -o loop,offset=%u,sizelimit=%u %s   /\n",
 			x,
 			((dsk->part[x].bootid == 0)?' ':'b'),
 			dsk->part[x].relsect /2048,
 			dsk->part[x].numsect /2048,
-			dsk->part[x].relsect * 512,
-			dsk->part[x].numsect * 512,
+			dsk->part[x].relsect,
+			dsk->part[x].numsect,
+//			dsk->part[x].relsect * 512,
+//			dsk->part[x].numsect * 512,
 			argv[1]);
 	}
 }

@@ -1,6 +1,7 @@
 #include "ctools.h"
 #include "video.h"
 #include <kalloc.h>
+#include <pci.h>
 //#define VMMMMEM_C(x,y)  (vmem+(((y)*80+(x))*2))
 volatile unsigned char* vmem;
 void panic();
@@ -138,10 +139,12 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	}
 	//
 	char *hex = "0123456789ABCDEF";
+	pciScanBus();
+	kalloc_init();
+	/*
 	char u;
-	//kalloc_init();
 	while ((u=read_serial())) {
-	switch (u) {
+	    switch (u) {
 		case 'b':
 		case 0x7f:
 			write_serial('\b');
@@ -157,9 +160,9 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 			break;
 		default:
 			write_serial(u);
+	    }
 	}
-	}
-	k_cls();
+	*/
 //	for (int i = 0; i < 80*25*2; i+= 2) {
 //		vmem[i+1] = (unsigned char)0x20;
 //		vmem[i] = 'A';
@@ -168,8 +171,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	
 	//scroll (5);
 	//spin(10000000);
-	k_cls();
-	
+	return;	
 	for (int i = 0; i < 16; i++) {
 		VMEM_C(1,i+3)[0] = hex[i];
 		VMEM_C(i+3,1)[0] = hex[i];
@@ -190,6 +192,5 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	//VMEM(0,1)='0';
 	//MEM(0,2)='1';
 	//VMEM(0,3)
-	k_swrite("test\ntest2",OUT_DBG);
 }
 

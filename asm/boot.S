@@ -94,8 +94,13 @@ _bkpt:
 	call prog_pic
 	sti
 	call k_main	; start C
+	int 0x24
 	.tst:
 	hlt
+	mov al, 'I'
+	push eax
+	call dbg
+	add esp, 4
 	jmp .tst
 	cli
 	pusha
@@ -201,27 +206,45 @@ prog_pic: ; {{{
 	mov ebp, esp
 	sub esp, 4
 
-	mov al, 0x20
-	out 0x20, al
-	mov al, 0x11
-	out 0x20, al
-	out 0xA0, al
-	mov al, PIC_IRQ_BASE
-	out 0x21, al
-	add al, 0x08
-	out 0xA1, al
-	mov al, 0x04
-	out 0x21, al
-	mov al, 0x02
-	out 0xA1, al
-	mov al, 0x01
-	out 0x21, al
-	out 0xA1, al
-	mov al, 0x00
-	out 0x21, al
-	out 0xA1, al
+	outb 0x20, 0x20			;nop
+	outb 0x20, 0x11			; start programming
+	outb 0xA0, 0x11			; 
+	outb 0x21, PIC_IRQ_BASE		; base
+	outb 0xA1, (PIC_IRQ_BASE+8)
+	outb 0x21, 0x04			; continue init seq
+	outb 0xA1, 0x02
+	outb 0x21, 0x01			; 8086/88  mode
+	outb 0xA1, 0x01
+;	outb 0x21, 0x00
+;	outb 0xA1, 0x00
 
-	; Timer... go ballistic.
+	;outb 0x21, 0xe7
+	outb 0x21, 11100101b
+	outb 0xA1, 0xff
+	;mov al, 0x20
+	;out 0x20, al
+	;mov al, 0x11
+	;out 0x20, al
+	;out 0xA0, al
+	;mov al, PIC_IRQ_BASE
+	;out 0x21, al
+	;add al, 0x08
+	;out 0xA1, al
+	;mov al, 0x04
+	;out 0x21, al
+	;mov al, 0x02
+	;out 0xA1, al
+	;mov al, 0x01
+	;out 0x21, al
+	;out 0xA1, al
+	;mov al, 0x00
+	;out 0x21, al
+	;out 0xA1, al
+
+	;   Enable masks...
+	;mov al, 0xb5
+	;out 0x21, al
+	;   Timer... go ballistic.
 	mov al, 0x36
 	out 0x43, al
 	mov al, 0xff	; high byte

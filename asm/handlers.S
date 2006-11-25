@@ -261,9 +261,11 @@
 [global int_FF]
 ; }}}
 [extern dbgb]
+[extern powerdown]
 [extern dbgs]
 [extern dbgr]
 [extern dbg]
+[extern sdebug_init]
 [extern INTCT]
 [extern sc_proc]
 [global init_idesc]
@@ -1016,36 +1018,45 @@ int_22 : ; {{{3
 int_23 : ; {{{3
 	cli
 	pusha
-		mov al, '2'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, '3'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
+		mov al, [.ct]
+		cmp al, 0
+		je .ret
+		call sdebug_init
+		;
+;		mov bl, al
+;		add dx, 0x05
+;	.lp:	in al, dx
+;		test al, 0x20
+;		je .lp
+;		mov al, bl
+;		mov dx, 0x2f8
+;		out dx, al
+.ret		mov al, [.ct]
+		xor al, 0x01
+		mov [.ct], al
+		mov dx, 0x2f8
+		in al, dx
+		outb 0x20, 0x20;
 	popa
 	sti
 	iret
+	.ct: db 1
 int_24 : ; {{{3
 	cli
 	pusha
-		mov al, '2'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, '4'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
+		mov dx, 0x3f8
+		in al, dx
+		cmp al, 0x03
+		je powerdown
+		mov bl, al
+		add dx, 0x05
+	.lp:	in al, dx
+		test al, 0x20
+		je .lp
+		mov al, bl
+		mov dx, 0x3f8
+		out dx, al
+		outb 0x20, 0x20;
 	popa
 	sti
 	iret
@@ -1088,11 +1099,13 @@ int_26 : ; {{{3
 int_27 : ; {{{3
 	cli
 	pusha
-		; Good reboot code here...
-		;lidt [.tmp]
-		;int 8
-		;.tmp: dd 0xffffff,0xffffff
-
+		in al, 0x20
+		test al, 0x80
+		jnz .retnow
+		outb 0x20, 0x20
+.retnow:	popa
+		sti
+ 		iret
 		;mov al, '2'
 		;push DWORD eax
 		;call dbg
