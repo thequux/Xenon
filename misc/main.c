@@ -14,6 +14,11 @@ struct __attribute__ ((packed)) mb_mod {
 	int reserved;
 
 };
+extern struct {
+	unsigned int low;
+	unsigned int high;
+} cpu_freq;
+
 struct __attribute__ ((packed)) mboot_info {
 	int flags;
 	struct { // memory info... if flags[0]
@@ -107,19 +112,16 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 			char* buf = mbd->module_info.mod_addr[i].module_id;
 			buf++;
 			while (*(buf) && *(buf-1) != ' ') buf++;
-			k_swrite("Loading module ", OUT_STD);
-			k_swrite(buf, OUT_STD);
+			printf ("Loading module [%s]...", buf);
+			//k_swrite("Loading module ", OUT_STD);
+			//k_swrite(buf, OUT_STD);
 			if (strncmp("font ", buf, 5) == 0) {
 				set_font(mbd->module_info.mod_addr[i].start, buf[5] - '0');
-				k_swrite("... \e[1;34mDONE\e[0m\n", OUT_STD);
+				k_swrite(" \e[1;34mDONE\e[0m\n", OUT_STD);
 			} else {
-				k_swrite("... \e[1;31mUnknown module name!\e[0m\n", OUT_STD);
+				k_swrite(" \e[1;31mUnknown module name!\e[0m\n", OUT_STD);
 			}
 		}
-		pft();		
-		//for (int i = 0; i < 100; i++)
-		//	spin(1000000);
-		
 	}
 	if (mbd->flags & 0x400) {
 		// apm avaliable...
@@ -137,6 +139,11 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	} else {
 		apm_info.valid = 0x00;
 	}
+	//unsigned int instr;
+	//instr = cpu_freq.low / 10;
+	//double cpf = instr / 1000.0;
+	
+	printf ("Clock speed: %d", cpu_freq.low); //(int)cpf, (int)(1000*(cpf-(int)cpf)));
 	//
 	char *hex = "0123456789ABCDEF";
 	pciScanBus();

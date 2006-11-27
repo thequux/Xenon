@@ -8,6 +8,7 @@ STACKSIZE equ 0x4000          ; that's 16k.
 [global kalloc_pool]
 [global kalloc_len]
 [extern _ebss]
+[global cpu_freq]
 
 %macro segdesc 3.nolist	; segd base limit type {{{
 	%assign type %3			; type is 0bP-DPL-S-Type
@@ -66,6 +67,7 @@ apm_info: ; {{{
 ;     18      | dseg_len             |
 ;             +----------------------+
 ; }}}
+cpu_freq: dd 0, 0
 GDT: ; {{{
 	segdesc 0x0, 0x0, 0x0
 	segdesc 0x0, 0xffffffff, 0x9a

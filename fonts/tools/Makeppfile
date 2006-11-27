@@ -1,0 +1,5 @@
+XE_HOSTED := true
+include std-defs.mk
+
+psf2raw: cnvshell.o psf2raw.o
+	gcc -o $(outputs) $(inputs) -lpsf

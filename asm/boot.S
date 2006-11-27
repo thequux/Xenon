@@ -44,6 +44,7 @@ if 0
 %endmacro
 ; }}}
 ; headers {{{
+[global cpuspeed]
 [global _start]
 [global _bkpt]
 [global apm_info]
@@ -63,6 +64,7 @@ if 0
 [extern apm_info.valid]
 [extern gdt_handle]
 [extern STACK_TOP]
+[extern cpu_freq]
 [BITS 32]
 [extern k_main] ; this is in the C source as k_main
 ; }}}
@@ -91,16 +93,12 @@ _bkpt:
 	jmp 0x08:.nxt
 	.nxt:
 	;hlt
+	call cpuspeed
 	call prog_pic
 	sti
 	call k_main	; start C
-	int 0x24
 	.tst:
 	hlt
-	mov al, 'I'
-	push eax
-	call dbg
-	add esp, 4
 	jmp .tst
 	cli
 	pusha
@@ -199,6 +197,49 @@ powerdown: ; {{{
 				; to be shoved into memory so that it ends at 0x1000
 .halt:	incbin 'rmhalt.bin'	; to be loaded at 0x1000. 0x100 bytes max.
 times (0x100+.halt-$) db 0x00
+; }}}
+
+looplen equ 500
+cpuspeed: ; {{{
+	nop 
+	push ebp
+	mov ebp, esp
+	sub esp, 4
+	cli
+	outb 0x20, 0x20			;nop
+	outb 0x20, 0x11			; start programming
+	outb 0xA0, 0x11			; 
+	outb 0x21, 0x30			; base
+	outb 0xA1, 0x38
+	outb 0x21, 0x04			; continue init seq
+	outb 0xA1, 0x02
+	outb 0x21, 0x01			; 8086/88  mode
+	outb 0xA1, 0x01
+	
+	outb 0x21, 11111110b
+	outb 0xA1, 11111111b
+
+	mov al, 0x36
+	out 0x43, al
+	mov al, 0x9b	; low byte
+	out 0x40, al
+	mov al, 0x2e	; high byte
+	out 0x40, al
+	
+	mov ebx, looplen+1 ; (msec / 10) + 1
+	sti
+.wait:	hlt
+	jc .wait
+	
+	; update cpufreq.
+	mov edx, [cpu_freq+4]
+	mov eax, [cpu_freq]
+	mov ebx, (looplen * 10000)
+	div ebx
+	mov  [cpu_freq], eax
+	cli
+	leave
+	ret
 ; }}}
 prog_pic: ; {{{
 	nop 

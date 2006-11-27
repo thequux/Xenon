@@ -262,6 +262,7 @@
 ; }}}
 [extern dbgb]
 [extern powerdown]
+[extern cpu_freq]
 [extern dbgs]
 [extern dbgr]
 [extern dbg]
@@ -1268,20 +1269,30 @@ int_2F : ; {{{3
 ; int 3x {{{2
 int_30 : ; {{{3
 	cli
-	pusha
-		mov al, '3'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, '0'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-	popa
+	dec ebx
+
+	jz .end
+	bt DWORD [esp+8], 0
+	jc .cont
+	;start
+	rdtsc
+	mov [cpu_freq+4], edx
+	mov [cpu_freq], eax
+	bts DWORD [esp+8],0
+	jmp .cont
+	.end:
+	rdtsc
+	mov ebx, [cpu_freq]
+	mov ecx, [cpu_freq+4]
+	sub eax, ebx
+	sbb edx, ecx
+	mov [cpu_freq+4], edx
+	mov [cpu_freq], eax
+	mov ecx, 0
+	btr DWORD [esp+8], 0
+	.cont:
+	mov al, 0x20
+	out 0x20, al
 	sti
 	iret
 int_31 : ; {{{3
@@ -5299,7 +5310,6 @@ handlers: ; {{{1
 	idesc int_FF, 0
 ; post {{{1
 hlen equ ($-handlers)
-
 idt_handle: ; {{{2
 	dw (hlen-1)
 	dd handlers
