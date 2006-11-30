@@ -1,5 +1,5 @@
 include std-defs.mk
-OBJS	:= mbheader.o boot.o data.o handlers.o sdebug.o
+OBJS	:= mbheader.o boot.o data.o handlers.o sdebug.o font.o
 boot.o: rmhalt.bin rmswitch.bin
 
 mbheader.o: ASFLAGS := -f elf $(ASFLAGS_WARN)

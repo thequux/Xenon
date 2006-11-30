@@ -39,10 +39,10 @@ int main(int argc, char** argv) {
 			((dsk->part[x].bootid == 0)?' ':'b'),
 			dsk->part[x].relsect /2048,
 			dsk->part[x].numsect /2048,
-			dsk->part[x].relsect,
-			dsk->part[x].numsect,
-//			dsk->part[x].relsect * 512,
-//			dsk->part[x].numsect * 512,
+//			dsk->part[x].relsect,
+//			dsk->part[x].numsect,
+			dsk->part[x].relsect * 512,
+			dsk->part[x].numsect * 512,
 			argv[1]);
 	}
 }

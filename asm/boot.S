@@ -199,7 +199,7 @@ powerdown: ; {{{
 times (0x100+.halt-$) db 0x00
 ; }}}
 
-looplen equ 500
+looplen equ 50
 cpuspeed: ; {{{
 	nop 
 	push ebp
@@ -227,10 +227,14 @@ cpuspeed: ; {{{
 	out 0x40, al
 	
 	mov ebx, looplen+1 ; (msec / 10) + 1
+
+	;; The timing loop... 
 	sti
 .wait:	hlt
 	jc .wait
-	
+	cli
+	;; End of the timing loop
+
 	; update cpufreq.
 	mov edx, [cpu_freq+4]
 	mov eax, [cpu_freq]

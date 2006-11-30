@@ -1,15 +1,16 @@
 #include <ctools.h>
 #include <video.h>
 #include <kqueue.h>
-#define GRAPHICS_ADDR_REG 0x3CE
-#define GRAPHICS_DATA_REG 0x3CF
+#define GRAPHICS_ADDR_REG	0x3CE
+#define GRAPHICS_DATA_REG	0x3CF
 #define SEQ_ADDR_REG		0x3C4
 #define SEQ_DATA_REG		0x3C5
-
+#define CRTC_ADDR_REG		0x3D4
+#define CRTC_DATA_REG		0X3D5
 void parse_csi(char** str, char* action, int vals[16], int* nread);
 static int gattr;
 extern volatile unsigned char* vmem;
-//extern unsigned char font[];
+extern unsigned char default_font[];
 int scroll_p;
 
 void* get_vmem_base () {
@@ -35,8 +36,9 @@ void* get_vmem_base () {
 void init_con () {
 	k_cls();
 	char seq3;
-	set_font (NULL,1);
 
+	set_font (default_font,0);
+	set_font (default_font,1);
 	// make sure that planes are correct...
 	outb (SEQ_ADDR_REG, 0x03);
 	seq3 = inb (SEQ_DATA_REG);
@@ -64,7 +66,7 @@ void set_font(void* font, int plane) {
 	outb (GRAPHICS_ADDR_REG, 0x06);
 	gc6 = inb (GRAPHICS_DATA_REG);
 	outb (GRAPHICS_DATA_REG, gc6 & ~0x02);
-	
+
 
 	//Where is the graphics segment?
 	switch ( (gc6 >> 2) & 0x03) {
@@ -83,6 +85,14 @@ void set_font(void* font, int plane) {
 		font = (void*)seg;
 	
 	memcpy ((unsigned char*)seg + plane * 8192, font, 8192);
+	
+	// Set height
+	outb (CRTC_ADDR_REG, 0x09);
+	unsigned char msl = inb (CRTC_DATA_REG);
+	outb (CRTC_DATA_REG, (msl & 0xe0) | 11);
+	
+	outb (SEQ_ADDR_REG, 0x01);
+	outb (SEQ_DATA_REG, inb(SEQ_DATA_REG | 0x01));
 	//restore regs.
 	outb (SEQ_ADDR_REG, 0x02);
 	outb (SEQ_DATA_REG, seq2);

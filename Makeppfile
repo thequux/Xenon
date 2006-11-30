@@ -8,7 +8,7 @@ prebuild += tools/ccdv
 boot.img: krnl-s menu.lst boot.img.tmpl
 	cp boot.img.tmpl boot.img
 	mount -o loop boot.img /mnt/floppy
-	cp krnl-s /mnt/floppy/boot/krnl-1
+	cat krnl-s | gzip -9 > /mnt/floppy/boot/krnl-1.gz
 	cp menu.lst /mnt/floppy/boot/grub/menu.lst
 	umount /mnt/floppy
 
