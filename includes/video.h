@@ -13,6 +13,12 @@ void scroll (int lines);
 
 int printf(const char* template, ...);
 
+#define GRAPHICS_ADDR_REG	0x3CE
+#define GRAPHICS_DATA_REG	0x3CF
+#define SEQ_ADDR_REG		0x3C4
+#define SEQ_DATA_REG		0x3C5
+#define CRTC_ADDR_REG		0x3D4
+#define CRTC_DATA_REG		0X3D5
 #define VMEM_C(x,y)  (vmem+(((y)*maxcol_p+(x))*2))
 
 #define maxcol_p	80
@@ -23,6 +29,34 @@ int printf(const char* template, ...);
 // the amount of memory to allocate for backing a console, in bytes.
 // Currently, 20K, which is enough for 128-25=103 lines of scrollback.
 #define VMEM_ALLOC 	(160 * 128)
+
+static inline void vga_write_gfx(unsigned char addr, unsigned char data) {
+	outb (GRAPHICS_ADDR_REG, addr);
+	outb (GRAPHICS_DATA_REG, data);
+}
+
+static inline void vga_write_seq(unsigned char addr, unsigned char data) {
+	outb (SEQ_ADDR_REG, addr);
+	outb (SEQ_DATA_REG, data);
+}
+
+static inline void vga_write_crt(unsigned char addr, unsigned char data) {
+	outb (CRTC_ADDR_REG, addr);
+	outb (CRTC_DATA_REG, data);
+}
+
+static inline void vga_write_att(unsigned char addr, unsigned char data) {
+		__asm__ ("cli");   // this is critical!
+        	inb (0x3da);	// Read ISR1 to reset flipflop.
+char addr0 = 	inb (0x3c0);	// read current address
+		spin(500);
+		outb (0x3c0, addr);
+		spin(500);
+		outb (0x3c0, data);
+		spin(500);
+		outb (0x3c0, addr0);
+		__asm__ volatile ("sti");
+}
 // TODO: make this dynamic. Need kalloc for that.
 /* struct console_driver {
 	int id; // a unique, opaque identifier

@@ -1,18 +1,12 @@
 #include <ctools.h>
 #include <video.h>
 #include <kqueue.h>
-#define GRAPHICS_ADDR_REG	0x3CE
-#define GRAPHICS_DATA_REG	0x3CF
-#define SEQ_ADDR_REG		0x3C4
-#define SEQ_DATA_REG		0x3C5
-#define CRTC_ADDR_REG		0x3D4
-#define CRTC_DATA_REG		0X3D5
 void parse_csi(char** str, char* action, int vals[16], int* nread);
 static int gattr;
 extern volatile unsigned char* vmem;
 extern unsigned char default_font[];
 int scroll_p;
-
+void init_vga();
 void* get_vmem_base () {
 	char gc6;
 	outb (GRAPHICS_ADDR_REG, 0x06);
@@ -34,6 +28,9 @@ void* get_vmem_base () {
 
 }
 void init_con () {
+	init_vga();
+	//__asm__ ("cli");
+	//__asm__ ("hlt");
 	k_cls();
 	char seq3;
 
