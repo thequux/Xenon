@@ -243,8 +243,8 @@ void cirrus_cls (struct console* THIS) {
 	for (long int i = 0; i < 1024 * 768 * 3; i++) {
 		lfb[i] =  0;
 	}
-	THIS->xpos = 1;
-	THIS->ypos = 1;
+	THIS->xpos = 0;
+	THIS->ypos = 0;
 }
 static void disp_char(struct console *THIS, uchar val) {
 	int off_x = THIS->xpos * font->w;
@@ -282,8 +282,8 @@ void init_vga() {
 	set_parm(0,0,0);
 	lfb = ((unsigned char*)0xe0000000)  + 0x140000; // +(1024*3*427) - 341*3 - 1;
 	cur_x = 0;
-	CON.xpos = 1;
-	CON.ypos = 1;
+	CON.xpos = 0;
+	CON.ypos = 0;
 	cur_y = 0;
 	CON.read = NULL;
 //	CON.write = cirrus_write;

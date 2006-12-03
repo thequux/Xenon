@@ -34,7 +34,9 @@ void init_con () {
 	init_vga();
 	//__asm__ ("cli");
 	//__asm__ ("hlt");
-	k_cls();
+	CON.cls(&CON);
+	CON.bg = colors[0];
+	CON.fg = colors[7];
 	char seq3;
 return;
 
