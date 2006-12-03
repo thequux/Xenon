@@ -1,10 +1,13 @@
 #include <ctools.h>
 #include <video.h>
 #include <kqueue.h>
+struct console CON;
+// struct font FON;
+extern char default_font[];
 void parse_csi(char** str, char* action, int vals[16], int* nread);
 static int gattr;
 extern volatile unsigned char* vmem;
-extern unsigned char default_font[];
+//extern struct font default_font[];
 int scroll_p;
 void init_vga();
 void* get_vmem_base () {
@@ -33,6 +36,7 @@ void init_con () {
 	//__asm__ ("hlt");
 	k_cls();
 	char seq3;
+return;
 
 	set_font (default_font,0);
 	set_font (default_font,1);
@@ -77,6 +81,10 @@ void set_font(void* font, int plane) {
 		case 3:
 			seg = 0xB8000;
 			break;
+		default:
+			k_swrite("VIDEO SEGMENT ERROR", OUT_STD);
+			panic();
+			seg = 0;
 	}
 	if (font == NULL)
 		font = (void*)seg;
@@ -197,7 +205,7 @@ void k_iwrite( int c, int dest) {
 	k_swrite(buf,dest);
 }
 
-void k_putchar(char c, int type, char code) {
+void k_putchar_vga(char c, int type, char attr) {
 	static int x = 0;
 	static int y = 0;
 	
@@ -216,7 +224,7 @@ void k_putchar(char c, int type, char code) {
 				return;
 			default:
 				//p = (y * maxcol + x) << 1;
-				VMEM_C(x,y)[1] = (unsigned char)code;
+				VMEM_C(x,y)[1] = (unsigned char)attr;
 				VMEM_C(x,y)[0] = c;
 				x++;
 				if (x == maxcol) {
@@ -232,6 +240,7 @@ void k_putchar(char c, int type, char code) {
 		}
 	}
 }
+
 #define ATTR_RV 0x01
 
 //TODO: add buffer for escape sequences
@@ -273,15 +282,22 @@ void k_swrite(char* str, int type) {
 		    case 'm':
 		    	for (int i = 0; i < nread; i++) { // {{{
 			    switch (vals[i]) {
-			    	case 0:  attr = 0x07;
+			    	case 0:  CON.fg = colors[7];
+					 CON.bg = colors[0];
+					 CON.intense = FALSE;
 					 break;
-			    	case 1:	 attr |= 0x08;
+			    	case 1:	 CON.fg = colors[CON.fg.index | 0x08];
+					 CON.intense = TRUE;
 					 break;
 				case 2:  break;
 				case 3:  break;
-				case 5:  attr |= 0x80;
+				case 5:  //attr |= 0x80;
+					 break;
 				case 7:  if (!(flags & ATTR_RV)) {
-						attr = (attr & 0x88) | ((attr << 4) & 0x70) | ((attr >> 4)& 0x7);
+						struct color tmp = CON.fg;
+						CON.fg = CON.bg;
+						CON.bg = tmp;
+//						attr = (attr & 0x88) | ((attr << 4) & 0x70) | ((attr >> 4)& 0x7);
 						flags |= ATTR_RV;
 					 }
 					 break;
@@ -289,18 +305,34 @@ void k_swrite(char* str, int type) {
 				case 11: break;
 				case 12: break;
 				case 21:
-				case 22: attr &= ~0x08;
+				case 22: CON.fg = colors[CON.fg.index & ~0x08]; 
+					 CON.intense = FALSE;
 					 break;
 				case 24: break;
-				case 25: attr &= ~0x80;
+				case 25: break; //attr &= ~0x80;
 				case 27: if (flags & ATTR_RV) {
-						attr = (attr & 0x88) | ((attr << 4) & 0x70) | ((attr >> 4)& 0x7);
+						struct color tmp;
+						tmp = CON.fg;
+						CON.fg = CON.bg;
+						CON.bg = tmp;
+						//attr = (attr & 0x88) | ((attr << 4) & 0x70) | ((attr >> 4)& 0x7);
 						flags &= ~ATTR_RV;
 					 }
 					 break;
 				// Colors {{{
-				case 30: attr = (attr & 0xf8) | 0x00; break;
-				case 31: attr = (attr & 0xf8) | 0x04; break;
+
+				case 30: CON.fg = colors[CON.intense? 8:0]; break;
+				case 31: CON.fg = colors[CON.intense?12:4]; break;
+				case 32: CON.fg = colors[CON.intense?10:2]; break;
+				case 33: CON.fg = colors[CON.intense?14:6]; break;
+				case 34: CON.fg = colors[CON.intense? 9:1]; break;
+				case 35: CON.fg = colors[CON.intense?13:5]; break;
+				case 36: CON.fg = colors[CON.intense?11:3]; break;
+				case 37: CON.fg = colors[CON.intense?15:7]; break;
+				case 38: CON.fg = colors[CON.intense?15:7]; break;
+				case 39: CON.fg = colors[CON.intense?15:7]; break;
+					//(attr & 0xf8) | 0x00; break;
+/*				case 31: attr = (attr & 0xf8) | 0x04; break;
 				case 32: attr = (attr & 0xf8) | 0x02; break;
 				case 33: attr = (attr & 0xf8) | 0x06; break;
 				case 34: attr = (attr & 0xf8) | 0x01; break;
@@ -308,8 +340,17 @@ void k_swrite(char* str, int type) {
 				case 36: attr = (attr & 0xf8) | 0x03; break;
 				case 37: attr = (attr & 0xf8) | 0x07; break;
 				case 38: attr = (attr & 0xf8) | 0x07; break;
-				case 39: attr = (attr & 0xf8) | 0x07; break;
-
+				case 39: attr = (attr & 0xf8) | 0x07; break; */
+				case 40: CON.bg = colors[0]; break;
+				case 41: CON.bg = colors[4]; break;
+				case 42: CON.bg = colors[2]; break;
+				case 43: CON.bg = colors[6]; break;
+				case 44: CON.bg = colors[1]; break;
+				case 45: CON.bg = colors[5]; break;
+				case 46: CON.bg = colors[3]; break;
+				case 47: CON.bg = colors[7]; break;
+				case 49: CON.bg = colors[0]; break;
+/*
 				case 40: attr = (attr & 0x8f) | 0x00; break;
 				case 41: attr = (attr & 0x8f) | 0x40; break;
 				case 42: attr = (attr & 0x8f) | 0x20; break;
@@ -319,7 +360,7 @@ void k_swrite(char* str, int type) {
 				case 46: attr = (attr & 0x8f) | 0x30; break;
 				case 47: attr = (attr & 0x8f) | 0x70; break;
 				case 49: attr = (attr & 0x8f) | 0x00; break;
-				// }}}
+*/				// }}}
 				default: break;
 				}
 			} // }}}
@@ -330,9 +371,22 @@ void k_swrite(char* str, int type) {
 		    }
 		}
 	    }
-	    k_putchar(*str++, type, attr);
+	    switch (*str){
+	    	case '\n':
+			CON.xpos = 0;
+			CON.ypos++;
+			break;
+		case '\t': 
+			CON.xpos = ((CON.xpos & ~0x7) + 8);
+			break;
+		default: CON.xpos++;
+	    CON.putchar(&CON, *str);
+	    }
+	    str++;
+
+	    //k_putchar(*str++, type, attr);
 	}
-	set_cur (0,0,0); // update console
+//	set_cur (0,0,0); // update console
 }
 void parse_csi(char** str, char* action, int vals[16], int* nread) {
 	*nread =0;
@@ -414,4 +468,23 @@ void k_cls() {
 	//vm2[10] = (unsigned char)0xb3;
 	//vm2[20] = (unsigned char)0xb3;
 }
+
+struct color colors[] = {
+	// R,G,B,idx
+	{0x00, 0x00, 0x00,  0},
+	{0x00, 0x00, 0xff,  1},
+	{0x00, 0x80, 0x00,  2},
+	{0x00, 0x80, 0x80,  3},
+	{0x80, 0x00, 0x00,  4},
+	{0x80, 0x00, 0x80,  5},
+	{0x80, 0x80, 0x00,  6},
+	{0x80, 0x80, 0x80,  7},
+	{0x80, 0x80, 0x80,  8},
+	{0x40, 0x40, 0xFF,  9},
+	{0x00, 0xff, 0x00, 10},
+	{0x00, 0xff, 0xff, 11},
+	{0xff, 0x00, 0x00, 12},
+	{0xff, 0x00, 0xff, 13},
+	{0xff, 0xff, 0x00, 14},
+	{0xff, 0xff, 0xff, 15}};
 // vim: foldmethod=syntax

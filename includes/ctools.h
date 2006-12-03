@@ -21,6 +21,7 @@ int strlen(void* str);
 
 void spin(unsigned long int cycles);
 void dbg(char c);  /* in asm */
+void panic();
 int parse_scbuf (unsigned char* buf);
 int memcpy (void* dest, const void* src, int count);
 int memset (void* buf, int val, int count);

@@ -26,15 +26,21 @@
 */
 #define VMEM_ADDR(x,y) (((y)*1024*3)+(x)*3)
 
-#define GRAPHICS_ADDR_REG	0x3CE
-#define GRAPHICS_DATA_REG	0x3CF
-#define SEQ_ADDR_REG		0x3C4
-#define SEQ_DATA_REG		0x3C5
-#define CRTC_ADDR_REG		0x3D4
-#define CRTC_DATA_REG		0X3D5
+static unsigned char* lfb; // +(1024*3*427) - 341*3 - 1;
+//static struct color bgcolor, fgcolor;
+
+//#define GRAPHICS_ADDR_REG	0x3CE
+//#define GRAPHICS_DATA_REG	0x3CF
+//#define SEQ_ADDR_REG		0x3C4
+//#define SEQ_DATA_REG		0x3C5
+//#define CRTC_ADDR_REG		0x3D4
+//#define CRTC_DATA_REG		0X3D5
 #define vga_write_misc(a,d) outb(a,d)
 #include <ctools.h>
 #include <video.h>
+
+static int cur_x, cur_y;
+
 void vga_write_hdr (unsigned char val){
 	unsigned char dummy;
 	outb (0x3c6, 0x00);
@@ -223,12 +229,68 @@ void set_parm(int w, int h, int bpp) {
 
 }
 
+/*void disp_char(uchar val) ;
+void cirrus_write (struct console* THIS, char* buf, int len) {
+	(void)THIS;
+	(void)buf;
+	(void)len;
+	for (int i = 0; i < len; i++) {
+		disp_char(buf[i]);
+	}
+}*/
+void cirrus_cls (struct console* THIS) {
+	(void)THIS;
+	for (long int i = 0; i < 1024 * 768 * 3; i++) {
+		lfb[i] =  0;
+	}
+	THIS->xpos = 1;
+	THIS->ypos = 1;
+}
+static void disp_char(struct console *THIS, uchar val) {
+	int off_x = THIS->xpos * font->w;
+	int off_y = THIS->ypos * (font->h-1);
+	uchar* off_addr = lfb + VMEM_ADDR(off_x, off_y);
+	(void)off_addr;
+	(void)val;
+	int b = 0;
+	unsigned char* glyph = font->glyphs+(font->glyph_size * val);
+	for (int i = 0; i < font->h; i++) {
+		unsigned char c = glyph[b];
+		for (int j = 0; j < font->w; j++) {
+			if (j%8 == 0){
+				c = glyph[b++];
+			}
+			if (c & 0x80) {
+				*off_addr++ = THIS->fg.b;
+				*off_addr++ = THIS->fg.g;
+				*off_addr++ = THIS->fg.r;
+			} else {
+				*off_addr++ = THIS->bg.b;
+				*off_addr++ = THIS->bg.g;
+				*off_addr++ = THIS->bg.r;
+			}
+			c <<= 1;
+		}
+		off_addr = lfb + VMEM_ADDR(off_x, off_y++);
+	}
+}
+
 void init_vga() {
 	init_chip();
 	set_parm(0,0,0);
 	init_chip();
 	set_parm(0,0,0);
-	unsigned char* lfb = ((unsigned char*)0xe0000000)  + 0x140000; // +(1024*3*427) - 341*3 - 1;
+	lfb = ((unsigned char*)0xe0000000)  + 0x140000; // +(1024*3*427) - 341*3 - 1;
+	cur_x = 0;
+	CON.xpos = 1;
+	CON.ypos = 1;
+	cur_y = 0;
+	CON.read = NULL;
+//	CON.write = cirrus_write;
+	CON.putchar = disp_char;
+	CON.cls = cirrus_cls;
+
+#if 0
 	for (int i = 0; i < 20; i++) {
 		lfb[i*3+0] = 0x80;
 		lfb[i*3+1] = 0x80;
@@ -264,29 +326,33 @@ void init_vga() {
 	}
 	while (1) {
 	for (int i = 0; i < 256; i+=2) {
+		unsigned char* lfb_l = lfb + VMEM_ADDR(256,256);
 		for (int j = 0; j < 256; j++) {
 			for (int k = 0; k < 256; k++) {
-				lfb[VMEM_ADDR(j+256,k+256)]   = i;
-				lfb[VMEM_ADDR(j+256,k+256)+1] = j;
-				lfb[VMEM_ADDR(j+256,k+256)+2] = k;
+				*lfb_l++ = i;
+				*lfb_l++ = j;
+				*lfb_l++ = k;
+//				lfb[VMEM_ADDR(j+256,k+256)]   = i;
+//				lfb[VMEM_ADDR(j+256,k+256)+1] = j;
+//				lfb[VMEM_ADDR(j+256,k+256)+2] = k;
 			}
+			lfb_l += 2304;
 		}
 	}
 	for (int i = 255; i >= 0; i-= 2) {
+		unsigned char* lfb_l = lfb + VMEM_ADDR(256,256);
 		for (int j = 0; j < 256; j++) {
 			for (int k = 0; k < 256; k++) {
-				lfb[VMEM_ADDR(j+256,k+256)]   = i;
-				lfb[VMEM_ADDR(j+256,k+256)+1] = j;
-				lfb[VMEM_ADDR(j+256,k+256)+2] = k;
+				*lfb_l++ = i;
+				*lfb_l++ = j;
+				*lfb_l++ = k;
+//				lfb[VMEM_ADDR(j+256,k+256)]   = i;
+//				lfb[VMEM_ADDR(j+256,k+256)+1] = j;
+//				lfb[VMEM_ADDR(j+256,k+256)+2] = k;
 			}
+			lfb_l += 2304;
 		}
 	}
 	}
-	while (1);
-	unsigned char tmp = 0;
-	while (1) {
-	lfb[1024 * 3+1] = tmp;
-	tmp = ~tmp;
-	spin(10000000);
-	}
+#endif
 }

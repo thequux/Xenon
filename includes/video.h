@@ -1,3 +1,4 @@
+#include <types.h>
 #include <driver.h>
 #include <kqueue.h>
 #ifndef XE_VIDEO_H
@@ -63,6 +64,43 @@ char addr0 = 	inb (0x3c0);	// read current address
 	BOOL allocateConsole(console* con);
 	BOOL 
 }; */
+struct color {
+	uchar r;
+	uchar g;
+	uchar b;
+	uchar index;
+};
+
+extern struct console {
+	void (*read) (struct console* THIS, char* buffer, int len);
+	//void (*write)(struct console* THIS, char* buffer, int len);
+	void (*putchar)(struct console* THIS, uchar buf);
+	void (*cls)  (struct console* THIS);
+	
+	//Data
+	struct color fg;
+	struct color bg;
+	int xpos;
+	int ypos;
+	int w;
+	int h;
+	BOOL intense;
+} CON;
+
+
+extern struct font_t {
+	u8_t w;		// width in pixels
+	u8_t h;		// height in pixels
+	u8_t w_byte;	// the number of bytes in a scanline
+	u8_t glyph_size;// the number of bytes in a glyph
+	u16_t nGlyphs;	// the number of glyphs
+	u8_t chkxor;	// the checkxor of the font; 
+			// the 16 bit checkxor if the entire font should be 0.
+			// Use this to make it so.
+	u8_t reserved;
+	u8_t glyphs[];	// the glyph data.
+} *font;
+#if 0
 struct console {
 	// virtual functions:
 	void (*scroll)(struct console* THIS, int dy, BOOL clear);
@@ -111,4 +149,7 @@ struct console {
 	// Any driver may read it; in fact, update probably needs to read it.
 	BOOL active;
 };
+#endif
+
+extern struct color colors[];
 #endif

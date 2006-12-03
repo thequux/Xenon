@@ -5,6 +5,8 @@
 //#define VMMMMEM_C(x,y)  (vmem+(((y)*80+(x))*2))
 volatile unsigned char* vmem;
 void panic();
+void init_vga();
+void disp_char(char val);
 int pft();
 void powerdown() __attribute__((noreturn));
 struct __attribute__ ((packed)) mb_mod {
@@ -98,12 +100,15 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	vmem = (unsigned char*)0xB8000;
 	//Multiboot crap.
 	init_con();
-	k_cls();
+	CON.cls(&CON);
+	printf("test");
+	//k_cls();
 	if (magic != 0x2BADB002) { // not multiboot!
 		k_swrite("\e[1;44;37mI'm a multiboot kernel, dammit! Use a multiboot bootloader!", OUT_STD);
 		panic();
 	}
 	//k_printf("1");
+	//kalloc_init();
 	if (mbd->flags & 0x8) { // module info
 		k_swrite("modinfo\n", OUT_STD);
 		k_iwrite (mbd->module_info.mod_count, OUT_STD);
@@ -116,8 +121,11 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 			//k_swrite("Loading module ", OUT_STD);
 			//k_swrite(buf, OUT_STD);
 			if (strncmp("font ", buf, 5) == 0) {
-				set_font(mbd->module_info.mod_addr[i].start, buf[5] - '0');
+				struct font_t* fnt = mbd->module_info.mod_addr[i].start;
+				font = fnt;
+				//set_font(mbd->module_info.mod_addr[i].start, buf[5] - '0');
 				k_swrite(" \e[1;34mDONE\e[0m\n", OUT_STD);
+				printf ("<w:%d h:%d bw:%d gs:%d ng:%d>\n", fnt->w, fnt->h, fnt->w_byte, fnt->glyph_size, fnt->nGlyphs);
 			} else {
 				k_swrite(" \e[1;31mUnknown module name!\e[0m\n", OUT_STD);
 			}
@@ -142,12 +150,13 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	//unsigned int instr;
 	//instr = cpu_freq.low / 10;
 	//double cpf = instr / 1000.0;
-	
+//	init_vga();
+	printf( "tes\xba\x80\xCD\xCD\xba");
+	//k_s_char('a');
 	printf ("Clock speed: %d", cpu_freq.low); //(int)cpf, (int)(1000*(cpf-(int)cpf)));
 	//
 	char *hex = "0123456789ABCDEF";
 	pciScanBus();
-	kalloc_init();
 	/*
 	char u;
 	while ((u=read_serial())) {

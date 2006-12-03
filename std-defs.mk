@@ -7,13 +7,13 @@ CCDV = $(find_upwards tools/ccdv)
 CC = $(CCDV) gcc
 NASM = $(CCDV) nasm
 ifndef XE_HOSTED
-CFLAGS		:= --std=gnu99 -g -nostartfiles -nodefaultlibs -nostdlib -Wall -Wextra -Werror $(INCLUDES) -fno-builtin 
+CFLAGS		:= --std=gnu99 -O3 -nostartfiles -nodefaultlibs -nostdlib -Wall -Wextra -Werror $(INCLUDES) -fno-builtin 
 ASFLAGS_WARN	:= -w+macro-params -w+macro-selfref -w+orphan-labels -w+gnu-elf-extensions
 ASFLAGS		:= -f elf -F stabs -g $(ASFLAGS_WARN)
 LDFLAGS		:= -T link.ld -z defs -nostdlib
 else
 #hosted
-CFLAGS		:= --std=gnu99 -g -Wall -Wextra -Werror $(INCLUDES) 
+CFLAGS		:= --std=gnu99 -O3 -Wall -Wextra -Werror $(INCLUDES) 
 ASFLAGS_WARN	:= -w+macro-params -w+macro-selfref -w+orphan-labels -w+gnu-elf-extensions
 ASFLAGS		:= -f elf -F stabs -g $(ASFLAGS_WARN)
 endif

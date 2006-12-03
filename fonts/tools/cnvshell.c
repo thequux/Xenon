@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 
     if (fname2) 
         {
-        fpout = fopen(fname2, "wb");
+        fpout = fopen(fname2, "w+b");
         if (!fpout) 
             {
             fclose(fpin);
