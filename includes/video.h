@@ -58,6 +58,17 @@ char addr0 = 	inb (0x3c0);	// read current address
 		outb (0x3c0, addr0);
 		__asm__ volatile ("sti");
 }
+
+static inline void vga_write_pel(unsigned char start, unsigned char end, char* vals) {
+	asm ("cli");
+	outb(0x3c8, start);
+	while ((start++) <= end) {
+		outb(0x3c9, *vals++);
+		outb(0x3c9, *vals++);
+		outb(0x3c9, *vals++);
+	}
+	asm("sti");
+}
 // TODO: make this dynamic. Need kalloc for that.
 /* struct console_driver {
 	int id; // a unique, opaque identifier
@@ -76,15 +87,17 @@ extern struct console {
 	//void (*write)(struct console* THIS, char* buffer, int len);
 	void (*putchar)(struct console* THIS, uchar buf);
 	void (*cls)  (struct console* THIS);
-	
+	void (*mv_cur) (struct console* THIS);
 	//Data
 	struct color fg;
 	struct color bg;
-	int xpos;
-	int ypos;
-	int w;
-	int h;
+	int xpos; // chars
+	int ypos; // chars
+	int w; // pixels
+	int h; // pixels
 	BOOL intense;
+	// private...
+	int old_xpos, old_ypos;
 } CON;
 
 

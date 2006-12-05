@@ -90,3 +90,16 @@ void* kalloc (int count) {
 	return kalloc_tbl[base].addr;
 }
 
+void mark_used (void* addr, int len) {
+	int offs = (char*)addr - (char*)kalloc_pool;
+	len += (offs%4096);
+	offs -= offs%4096;
+	offs /= 4096;
+	len = len + 4096 - len%4096;
+	len /= 4096;
+	while (len) {
+		kalloc_tbl[offs].free = FALSE;
+		offs++;
+		len--;
+	}
+}

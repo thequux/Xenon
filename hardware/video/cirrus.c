@@ -26,7 +26,78 @@
 */
 #define VMEM_ADDR(x,y) (((y)*1024*3)+(x)*3)
 
+//static unsigned char* cur; // +(1024*3*427) - 341*3 - 1;
 static unsigned char* lfb; // +(1024*3*427) - 341*3 - 1;
+static unsigned int dflt_cur[] = {
+	//shape
+	// 000000_0
+	// 000000_0
+	0x000000fc, //  1
+	0x000000fc, //  2
+	0x000000fc, //  3
+	0x000000fc, //  4
+	0x000000fc, //  5
+	0x000000fc, //  6
+	0x000000fc, //  7
+	0x000000fc, //  8
+	0x000000fc, //  9
+	0x000000fc, // 10
+	0x000000fc, // 11
+	0x000000fc, // 12
+	0x00000000, // 13
+	0x00000000, // 14
+	0x00000000, // 15
+	0x00000000, // 16
+	0x00000000, // 17
+	0x00000000, // 18
+	0x00000000, // 19
+	0x00000000, // 20
+	0x00000000, // 21
+	0x00000000, // 22
+	0x00000000, // 23
+	0x00000000, // 24
+	0x00000000, // 25
+	0x00000000, // 26
+	0x00000000, // 27
+	0x00000000, // 28
+	0x00000000, // 29
+	0x00000000, // 30
+	0x00000000, // 31
+	0x00000000, // 32
+	//mask
+	0x00000000, //  1
+	0x00000000, //  2
+	0x00000000, //  3
+	0x00000000, //  4
+	0x00000000, //  5
+	0x00000000, //  6
+	0x00000000, //  7
+	0x00000000, //  8
+	0x00000000, //  9
+	0x00000000, // 10
+	0x00000000, // 11
+	0x00000000, // 12
+	0x00000000, // 13
+	0x00000000, // 14
+	0x00000000, // 15
+	0x00000000, // 16
+	0x00000000, // 17
+	0x00000000, // 18
+	0x00000000, // 19
+	0x00000000, // 20
+	0x00000000, // 21
+	0x00000000, // 22
+	0x00000000, // 23
+	0x00000000, // 24
+	0x00000000, // 25
+	0x00000000, // 26
+	0x00000000, // 27
+	0x00000000, // 28
+	0x00000000, // 29
+	0x00000000, // 30
+	0x00000000, // 31
+	0x00000000 // 32
+};	
 //static struct color bgcolor, fgcolor;
 
 //#define GRAPHICS_ADDR_REG	0x3CE
@@ -38,6 +109,36 @@ static unsigned char* lfb; // +(1024*3*427) - 341*3 - 1;
 #define vga_write_misc(a,d) outb(a,d)
 #include <ctools.h>
 #include <video.h>
+
+// Tools for ROPs (raster operation)
+#define ROP_fg_base		0x01
+#define ROP_bg_base		0x00
+
+inline void ROP_setrgb_08(int base, int rgb) {
+	outb(base, rgb & 0xff);
+}
+inline void ROP_setrgb_16(int base, int rgb) {
+	outb(base, rgb & 0xff);
+	outb(base+0x10, ((rgb) >>  8) & 0xff);
+}
+inline void ROP_setrgb_24(int base, int rgb) {
+	outb(base, rgb & 0xff);
+	outb(base+0x10, ((rgb) >>  8) & 0xff);
+	outb(base+0x12, ((rgb) >> 16) & 0xff);
+}
+inline void ROP_setrgb_32(int base, int rgb) {
+	outb(base, rgb & 0xff);
+	outb(base+0x10, ((rgb) >>  8) & 0xff);
+	outb(base+0x12, ((rgb) >> 16) & 0xff);
+	outb(base+0x14, ((rgb) >> 24) & 0xff);
+}
+#define ROP_setrgb_08_qux(base,rgb)	outb(base,	((rgb)      ) & 0xff)
+#define ROP_setrgb_16_qux(base,rgb)	ROP_setrgb_08_qux(base,rgb); \
+	 				outb(base+0x10, ((rgb) >>  8) & 0xff)
+#define ROP_setrgb_24_qux(base,rgb)	ROP_setrgb_16_qux(base,rgb); \
+					outb(base+0x12, ((rgb) >> 16) & 0xff)
+#define ROP_setrgb_32_qux(base,rgb)	ROP_setrgb_24_qux(base,rgb); \
+					outb(base+0x14, ((rgb) >> 24) & 0xff)
 
 static int cur_x, cur_y;
 
@@ -238,6 +339,42 @@ void cirrus_write (struct console* THIS, char* buf, int len) {
 		disp_char(buf[i]);
 	}
 }*/
+static void draw_cursor (int x, int y, int w, int h) {
+	for (int j = 0; j<h; j++) {
+		unsigned char* buf = lfb+VMEM_ADDR(x,j+y);
+		for (int i = 0; i < w; i++) {
+			*buf ^= 0xff;
+			buf++;
+			*buf ^= 0xff;
+			buf++;
+			*buf ^= 0xff;
+			buf++;
+		}
+	}
+}
+static void mv_cur (struct console* THIS) {
+	// make sure hardware cursor is on...
+	
+	vga_write_seq (0x12, 0x01);
+	vga_write_seq (0x13, 0x00);
+	int xpos = (THIS->xpos+1) * font->w;
+	int ypos = (THIS->ypos-1) * (font->h-1) + font->h - 2;
+
+	vga_write_seq (0x10 | (xpos & 0x07) << 5, (xpos >> 3) & 0xff);
+	vga_write_seq (0x11 | ((ypos & 0x07) << 5), (ypos >> 3) & 0xff);
+	return;
+	draw_cursor ((THIS->old_xpos+1) * (font->w)- 1,
+		     (THIS->old_ypos )* (font->h-1),
+		     1,
+		     font->h-1);
+	draw_cursor ((THIS->xpos+1) * (font->w) - 1,
+	             (THIS->ypos) * (font->h-1),
+		     1,
+		     font->h-1);
+	THIS->old_xpos = THIS->xpos;
+	THIS->old_ypos = THIS->ypos;
+}
+
 void cirrus_cls (struct console* THIS) {
 	(void)THIS;
 	// Cirrus ROP
@@ -277,7 +414,46 @@ void cirrus_cls (struct console* THIS) {
 //	}
 	THIS->xpos = 0;
 	THIS->ypos = 0;
+/*	int bbar[] = {
+		0x050d15,
+		0x1a2229,
+		0x2c333a,
+		0x51575f,
+		0x645a57,
+		0x526072,
+		0x4e6a88,
+		0x8b99c1,
+		0xacb2cb,
+		0xe7e1c8,
+		0xe6e2ce,
+		0xd3d4d6
+		};*/
+	int bbar2[] = {
+		0x6e6e7a,
+		0xfafafc,
+		0xf6f6f8,
+		0xebecf1,
+		0xdfdfe9,
+		0xd8dbe4,
+		0xb6b8c4,
+		0xb7b9c5,
+		0xbabcc9,
+		0xc5c7d3,
+		0xcaccd8,
+		0xcbced7
+		};
+	// draw the chrome
+	int beg = 756;
+	for (int y = beg; y < beg+13; y++) {
+		uchar* vmem_l = lfb+VMEM_ADDR(0,y);
+		for (int x = 0; x < 1024; x++) {
+			*vmem_l++ =  bbar2[y-beg] & 0xff;
+			*vmem_l++ = (bbar2[y-beg] >> 8) & 0xff;
+			*vmem_l++ = (bbar2[y-beg] >> 16) & 0xff;
+		}
+	}
 }
+
 static void disp_char(struct console *THIS, uchar val) {
 	int off_x = THIS->xpos * font->w;
 	int off_y = THIS->ypos * (font->h-1);
@@ -308,11 +484,21 @@ static void disp_char(struct console *THIS, uchar val) {
 }
 
 void init_vga() {
+	char pal[] = {0x00, 0x00, 0x00, 0xff, 0xff, 0xff};
 	init_chip();
 	set_parm(0,0,0);
 	init_chip();
 	set_parm(0,0,0);
 	lfb = ((unsigned char*)0xe0000000)  + 0x140000; // +(1024*3*427) - 341*3 - 1;
+	
+	//setup cursor
+	vga_write_seq (0x12, 0x02);
+	vga_write_pel (0x00, 0x00, pal);
+	vga_write_pel (0x0f, 0x0f, pal+3);
+	vga_write_att (0x00, 0x00);
+	vga_write_att (0x0f, 0xff);
+	vga_write_seq (0x12, 0x01);
+	memcpy(((unsigned char*)0xe03fc000), dflt_cur, 256);
 	cur_x = 0;
 	CON.xpos = 0;
 	CON.ypos = 0;
@@ -321,6 +507,12 @@ void init_vga() {
 //	CON.write = cirrus_write;
 	CON.putchar = disp_char;
 	CON.cls = cirrus_cls;
+	CON.mv_cur = mv_cur;
+	
+	draw_cursor ((font->w - 2),
+		     0,
+		     2,
+		     font->h+1);
 
 #if 0
 	for (int i = 0; i < 20; i++) {

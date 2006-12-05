@@ -126,6 +126,7 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 				//set_font(mbd->module_info.mod_addr[i].start, buf[5] - '0');
 				k_swrite(" \e[1;34mDONE\e[0m\n", OUT_STD);
 				printf ("<w:%d h:%d bw:%d gs:%d ng:%d>\n", fnt->w, fnt->h, fnt->w_byte, fnt->glyph_size, fnt->nGlyphs);
+				mark_used (mbd->module_info.mod_addr[i].start,mbd->module_info.mod_addr[i].end - mbd->module_info.mod_addr[i].start);
 			} else {
 				k_swrite(" \e[1;31mUnknown module name!\e[0m\n", OUT_STD);
 			}
@@ -151,9 +152,8 @@ void k_main(struct mboot_info* mbd, unsigned int magic ) {
 	//instr = cpu_freq.low / 10;
 	//double cpf = instr / 1000.0;
 //	init_vga();
-	printf( "tes\xba\x80\xCD\xCD\xba");
 	//k_s_char('a');
-	printf ("Clock speed: %d", cpu_freq.low); //(int)cpf, (int)(1000*(cpf-(int)cpf)));
+	printf ("Clock speed: %d\n", cpu_freq.low); //(int)cpf, (int)(1000*(cpf-(int)cpf)));
 	//
 	char *hex = "0123456789ABCDEF";
 	pciScanBus();

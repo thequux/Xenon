@@ -1,6 +1,7 @@
 TOP = $(find_upwards std-defs.mk)
 INCLUDE_DIR := $(find_upwards includes)
 INCLUDES := -I$(INCLUDE_DIR)
+include config.mk
 
 CCDV = $(find_upwards tools/ccdv)
 

@@ -1,12 +1,13 @@
 #include <ctools.h>
 #include <video.h>
-struct pci_dev {
+#include <pci.h>
+/*struct pci_dev {
 	int bus;
 	int slot;
 	int fn;
 	int vendor;
 	int device;
-};
+};*/
 
 struct pci_dev pci_devs[128];
 int devCount;
@@ -22,7 +23,26 @@ inline unsigned long pciAddress (unsigned short bus, unsigned short slot,
 		);
 }
 
-unsigned short pciConfigReadWord (unsigned short bus, unsigned short slot,
+u8_t pciConfigReadByte (unsigned short bus, unsigned short slot,
+                                  unsigned short func, unsigned short offset)
+{
+   unsigned long address;
+   unsigned long lbus = (unsigned long)bus;
+   unsigned long lslot = (unsigned long)slot;
+   unsigned long lfunc = (unsigned long)func;
+   unsigned short tmp = 0;
+
+   /* create configuration address as per Figure 1 */
+   address = (unsigned long)((lbus << 16) | (lslot << 11) |
+           (lfunc << 8) | (offset & 0xfc) | ((unsigned int)0x80000000));
+
+   /* write out the address */
+   outl (0xCF8, address);
+   /* read in the data */
+   tmp = (u8_t)((inl (0xCFC) >> ((offset & 3) * 8)) & 0xffff);
+   return (tmp);
+}
+u16_t pciConfigReadWord (unsigned short bus, unsigned short slot,
                                  unsigned short func, unsigned short offset)
 {
    unsigned long address;
@@ -38,7 +58,7 @@ unsigned short pciConfigReadWord (unsigned short bus, unsigned short slot,
    /* write out the address */
    outl (0xCF8, address);
    /* read in the data */
-   tmp = (unsigned short)((inl (0xCFC) >> ((offset & 2) * 8)) & 0xffff);
+   tmp = (u16_t)((inl (0xCFC) >> ((offset & 2) * 8)) & 0xffff);
    return (tmp);
 }
 
@@ -81,7 +101,7 @@ void pciScanBus()
 		devCount++;
 		d->bus = bus;
 		d->slot = slot;
-		d->fn = fn;
+		d->func = fn;
 		d->vendor = vendor;
 		d->device = device;
 	    	if ((headerType & 0x7f) == 2) {
@@ -101,7 +121,7 @@ void pciScanBus()
 		printf ("%02x:%02x.%1x %04x:%04x%s", 
 			pci_devs[j].bus,
 			pci_devs[j].slot,
-			pci_devs[j].fn,
+			pci_devs[j].func,
 			pci_devs[j].vendor,
 			pci_devs[j].device,
 			((j != i+3)?" \xba ":""));
