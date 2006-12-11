@@ -10,6 +10,12 @@ SECTIONS
         *(.text)
     }
 
+    .init :
+    {
+    	_init_start = .;
+	*(.init);
+	_init_end = .;
+    }
     .rodata ALIGN (0x1000) :
     {
         *(.rodata)

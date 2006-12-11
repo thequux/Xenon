@@ -97,6 +97,16 @@ _bkpt:
 	call prog_pic
 	sti
 	call k_main	; start C
+	jmp .tst
+	mov eax, 1
+	mov edx, 0
+	mov ebx, 0
+	div ebx
+	pusha
+	push .0div
+	call dbgs
+	add esp, BYTE 4
+	call panic.bare
 	.tst:
 	hlt
 	jmp .tst
@@ -111,6 +121,7 @@ _bkpt:
 	
 	hlt
 .panic_msg: db 'WTF, mate? I just fell out of an infinite loop!', 0x0d, 0x0a, 0x00
+.0div:	db 'Divide by 0', 0x0d, 0x0a, 0x00
 ; }}}
 panic: ; {{{
 	cli

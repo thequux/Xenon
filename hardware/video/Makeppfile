@@ -1,4 +1,4 @@
 
 include std-defs.mk
 
-OBJS	:= $(CONFIG_VIDEO_DRIVER).o
+OBJS	:= $(CONFIG_VIDEO_DRIVER).o gee_whiz.o

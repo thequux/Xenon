@@ -7,15 +7,6 @@
 #include "config.h"
 // Standard C defines; also, data types
 #define NULL ((void*)(0))
-#ifdef CPLUSPLUS
-#  define BOOL bool
-#  define TRUE true
-#  define FALSE false
-#else
-#  define BOOL char
-#  define FALSE (0)
-#  define TRUE  (! FALSE)
-#endif
 
 int strlen(void* str);
 

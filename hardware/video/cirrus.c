@@ -2,32 +2,11 @@
 //
 // Covered under the MIT license
 // CirrusFB driver
-/*
-                .var    = {
-                        .xres           = 800,
-                        .yres           = 600,
-                        .xres_virtual   = 800,
-                        .yres_virtual   = 600,
-                        .bits_per_pixel = 8,
-                        .red            = { .length = 8 },
-                        .green          = { .length = 8 },
-                        .blue           = { .length = 8 },
-                        .width          = -1,
-                        .height         = -1,
-                        .pixclock       = 20000,
-                        .left_margin    = 128,
-                        .right_margin   = 16,
-                        .upper_margin   = 24,
-                        .lower_margin   = 2,
-                        .hsync_len      = 96,
-                        .vsync_len      = 6,
-                        .vmode          = FB_VMODE_NONINTERLACED
-                 }
-*/
+#include <pci.h>
 #define VMEM_ADDR(x,y) (((y)*1024*3)+(x)*3)
 
 //static unsigned char* cur; // +(1024*3*427) - 341*3 - 1;
-static unsigned char* lfb; // +(1024*3*427) - 341*3 - 1;
+unsigned char* lfb; // +(1024*3*427) - 341*3 - 1;
 static unsigned int dflt_cur[] = {
 	//shape
 	// 000000_0
@@ -377,6 +356,7 @@ static void mv_cur (struct console* THIS) {
 
 void cirrus_cls (struct console* THIS) {
 	(void)THIS;
+#if 1
 	// Cirrus ROP
 	//
 	outb (GRAPHICS_ADDR_REG, 0x31);
@@ -409,11 +389,14 @@ void cirrus_cls (struct console* THIS) {
 	vga_write_gfx (0x30, 0xc0);
 	vga_write_gfx (0x32, 0x0d);
 	vga_write_gfx (0x31, 0x02);
-//	for (long int i = 0; i < 1024 * 768 * 3; i++) {
-//		lfb[i] =  0;
-//	}
+#else
+	for (long int i = 0; i < 1024 * 768 * 3; i++) {
+		lfb[i] =  0;
+	}
+#endif
 	THIS->xpos = 0;
 	THIS->ypos = 0;
+	// draw the chrome
 /*	int bbar[] = {
 		0x050d15,
 		0x1a2229,
@@ -442,7 +425,6 @@ void cirrus_cls (struct console* THIS) {
 		0xcaccd8,
 		0xcbced7
 		};
-	// draw the chrome
 	int beg = 756;
 	for (int y = beg; y < beg+13; y++) {
 		uchar* vmem_l = lfb+VMEM_ADDR(0,y);
@@ -482,7 +464,7 @@ static void disp_char(struct console *THIS, uchar val) {
 		off_addr = lfb + VMEM_ADDR(off_x, off_y++);
 	}
 }
-
+void gee_whiz();
 void init_vga() {
 	char pal[] = {0x00, 0x00, 0x00, 0xff, 0xff, 0xff};
 	init_chip();
@@ -514,69 +496,20 @@ void init_vga() {
 		     2,
 		     font->h+1);
 
-#if 0
-	for (int i = 0; i < 20; i++) {
-		lfb[i*3+0] = 0x80;
-		lfb[i*3+1] = 0x80;
-		lfb[3*i+2] = 0x80;
-	}
-//	for (int i = 0; i < 20; i++) {
-//		lfb[i*3+0+ 1024 *2] = 0x80;
-//		lfb[i*3+1+ 1024 *2] = 0x80;
-//		lfb[i*3+2+ 1024 *2] = 0x80;
-//	}
-
-	for (int ct = 0; ct < 4;  ct++) {
-	for (int i = 0; i < 2; i++) {
-		lfb[i*3+0+ 1024 * 3 * ct] = 0x80;
-		lfb[i*3+1+ 1024 * 3*ct] = 0x80;
-		lfb[i*3+2+ 1024 * 3*ct] = 0x80;
-	}
-	}
-
-
-	//unsigned char bytes[] = {0x00,0x00,0xff};
-	for (int j=0; j< 768;j+= 1 ) { //; 1024*2) {
-	//for (int i = 0; i < 1024*3; i+=1) {
-	//	lfb[i+j]= bytes[i%3];
-	//}
-	lfb[VMEM_ADDR(512,j)+2] = 0x00;
-	lfb[VMEM_ADDR(512,j)+1] = 0x80;
-	lfb[VMEM_ADDR(512,j)+0] = 0xff;
-//	lfb[j*1024*3 + 512 * 3 + 2] = 0x00 ;
-//	lfb[j*1024*3 + 512 * 3 + 1] = 0x80;
-//	lfb[j*1024*3 + 512 * 3 + 0] = 0xff;
-//	spin(10000000);
-	}
-	while (1) {
-	for (int i = 0; i < 256; i+=2) {
-		unsigned char* lfb_l = lfb + VMEM_ADDR(256,256);
-		for (int j = 0; j < 256; j++) {
-			for (int k = 0; k < 256; k++) {
-				*lfb_l++ = i;
-				*lfb_l++ = j;
-				*lfb_l++ = k;
-//				lfb[VMEM_ADDR(j+256,k+256)]   = i;
-//				lfb[VMEM_ADDR(j+256,k+256)+1] = j;
-//				lfb[VMEM_ADDR(j+256,k+256)+2] = k;
-			}
-			lfb_l += 2304;
-		}
-	}
-	for (int i = 255; i >= 0; i-= 2) {
-		unsigned char* lfb_l = lfb + VMEM_ADDR(256,256);
-		for (int j = 0; j < 256; j++) {
-			for (int k = 0; k < 256; k++) {
-				*lfb_l++ = i;
-				*lfb_l++ = j;
-				*lfb_l++ = k;
-//				lfb[VMEM_ADDR(j+256,k+256)]   = i;
-//				lfb[VMEM_ADDR(j+256,k+256)+1] = j;
-//				lfb[VMEM_ADDR(j+256,k+256)+2] = k;
-			}
-			lfb_l += 2304;
-		}
-	}
-	}
-#endif
+	//gee_whiz();
 }
+
+static void cirrus_init (struct pci_dev *dev) {
+	init_vga();
+	CON.cls(&CON);
+	(void)dev;
+//	printf ("CIRRUSFB: %d:%d.%d\n", dev->bus, dev->slot, dev->func);
+}
+static struct pci_driver cirrus_drv[] __attribute__((unused))= {
+	{0x1013,0x00b8,cirrus_init},
+	{0,0,NULL},
+};
+void init(void) {
+	register_pci_driver(cirrus_drv);
+}
+REGISTER_INIT(init);

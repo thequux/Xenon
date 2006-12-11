@@ -19,10 +19,13 @@ int memset(void* buf, int val, int count) {
 }
 
 int strcmp(char* s1, char* s2) {
-	int n = strlen (s1);
-	int n2 = strlen (s2);
-	n = (n>n2)?n:n2;
-	return strncmp (s1, s2, n+1);
+	while (*s1 == *s2 && *s1 && *s2) {
+		s1++;
+		s2++;
+	}
+	if (*s1 < *s2) return -1;
+	if (*s1 == *s2) return 0;
+	return 1;
 }
 int strncmp(char* s1, char* s2, int n) {
 	

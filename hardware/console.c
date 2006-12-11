@@ -9,7 +9,7 @@ static int gattr;
 extern volatile unsigned char* vmem;
 //extern struct font default_font[];
 int scroll_p;
-void init_vga();
+//void init_vga();
 void* get_vmem_base () {
 	char gc6;
 	outb (GRAPHICS_ADDR_REG, 0x06);
@@ -31,10 +31,10 @@ void* get_vmem_base () {
 
 }
 void init_con () {
-	init_vga();
+//	init_vga();
 	//__asm__ ("cli");
 	//__asm__ ("hlt");
-	CON.cls(&CON);
+	//CON.cls(&CON);
 	CON.bg = colors[0];
 	CON.fg = colors[7];
 	char seq3;

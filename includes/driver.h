@@ -4,8 +4,10 @@
 
 /// Yuck. Will fix this braindamage ASAP.
 #define DRV(contents) union {char __fill[128]; struct { contents }; }
-
-
+#define __init __attribute__((section(".init"),unused ))
+typedef void (*initfn)(void);
+#define REGISTER_INIT(fn)   static initfn __init$##fn __init = fn;
+extern initfn _init_start, _init_end;
 // The wad of registers passed to a driver... I'm sure this interface
 // will change, and I'm hoping that I can get rid of this ASAP. 
 struct regs {
