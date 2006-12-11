@@ -46,6 +46,7 @@ int main (int argc, char** argv) {
 			delta = read (fd[1], cbuf+ct, 4096-ct);
 			ct+= delta;
 		}
+		cbuf[ct] = 0;
 		int status;
 		wait(&status);
 		fflush (NULL);

@@ -81,7 +81,13 @@ struct color {
 	uchar b;
 	uchar index;
 };
-
+struct CSI {
+	int vals[16];
+	BOOL esc;
+	char pos;
+	char term;
+	int nv;
+};
 extern struct console {
 	void (*read) (struct console* THIS, char* buffer, int len);
 	//void (*write)(struct console* THIS, char* buffer, int len);
@@ -98,6 +104,10 @@ extern struct console {
 	BOOL intense;
 	// private...
 	int old_xpos, old_ypos;
+	// CSI parsing
+	BOOL esc;
+	struct CSI csibuf;
+		
 } CON;
 
 
