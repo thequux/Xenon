@@ -51,7 +51,6 @@ void k_main(void* mbd, unsigned int magic ) {
 	//k_s_char('a');
 	printf ("Clock speed: %d\n", cpu_freq.low); //(int)cpf, (int)(1000*(cpf-(int)cpf)));
 	//
-	char *hex = "0123456789ABCDEF";
 	/*
 	char u;
 	while ((u=read_serial())) {
@@ -83,6 +82,8 @@ void k_main(void* mbd, unsigned int magic ) {
 	//scroll (5);
 	//spin(10000000);
 	return;	
+#if 0
+	char *hex = "0123456789ABCDEF";
 	for (int i = 0; i < 16; i++) {
 		VMEM_C(1,i+3)[0] = hex[i];
 		VMEM_C(i+3,1)[0] = hex[i];
@@ -103,5 +104,6 @@ void k_main(void* mbd, unsigned int magic ) {
 	//VMEM(0,1)='0';
 	//MEM(0,2)='1';
 	//VMEM(0,3)
+#endif
 }
 

@@ -1,15 +1,13 @@
 #include <ctools.h>
 #include <video.h>
+#define maxcol_p	80
+#define maxrow_p	25
+#define maxcol		(maxcol_p - 1)
+#define maxrow		(maxrow_p - 1)
 
-
-static void init_vga_text() {
-	set_font (default_font,0);
-	set_font (default_font,1);
-	// make sure that planes are correct...
-	outb (SEQ_ADDR_REG, 0x03);
-	seq3 = inb (SEQ_DATA_REG);
-	outb (SEQ_DATA_REG, 0x20);
-}
+extern char default_font[];
+extern volatile unsigned char* vmem;
+int scroll_p;
 
 void set_font(void* font, int plane) {
 	unsigned int seg;
@@ -82,48 +80,21 @@ void set_font(void* font, int plane) {
 	//printf ("  %x->%x\n", font, (char*)seg + plane * 8192);
 }
 
-void set_cur (int x, int y, char delay) {
+void set_cur (struct console *THIS) {
 	// if delay is non-zero, just cache position; do not access hardware
 	// If delay is 0, update console from cache only.
-	static char pos_hi=0, pos_lo=0; // data written to console
-	static char pos_cx=0, pos_cy=0; // data cached
-	static char up = 1;		// new data
-	static char force = 0x11;	// force write
-	if (delay) {
-		if (pos_cx == x && pos_cy == y)
-			return; // no sense in updating!
-		pos_cx = x;
-		pos_cy = y;
-		up = 1;
-	} else {
-		if (!force && !up)
-			return;
-		up = 0;
-		int np;
-		char nph, npl;
-		np = pos_cy * maxcol_p + pos_cx;
-		nph = ((np & 0xff00) >> 8);
-		npl = np & 0xff;
-		if (nph ^ pos_hi)
-			force |= 0x10;
-		if (npl ^ pos_lo)
-			force |= 0x01;
-		pos_lo = npl;
-		pos_hi = nph;
+	
+	int np;
+	char nph, npl;
+	np = (THIS->xpos-1) * maxcol_p + THIS->ypos;
+	nph = ((np & 0xff00) >> 8);
+	npl = np & 0xff;
+	int reg = ((inb(0x3cc)&0x01)?0x3D4:0x3B4);
+	outb (reg, 0x0f);
+	outb (reg+1, npl);
+	outb (reg, 0x0e);
+	outb (reg+1, nph);
 
-		if (!force)
-			return; // no updates!
-		int reg = ((inb(0x3cc)&0x01)?0x3D4:0x3B4);
-		if (force & 0x01) {
-			outb (reg, 0x0f);
-			outb (reg+1, pos_lo);
-		}
-		if (force & 0x10) {
-			outb (reg, 0x0e);
-			outb (reg+1, pos_hi);
-		}
-		force = 0;
-	}
 }
 void scroll(int lines) {
 	int l1 = 0, l2 = lines;
@@ -147,39 +118,75 @@ void scroll(int lines) {
 	VMEM_C(maxcol, scroll_p+1)[0] = (unsigned char)0xDB;
 	
 }
-void k_putchar_vga(char c, int type, char attr) {
-	static int x = 0;
-	static int y = 0;
+static void k_putchar_vga(struct console * THIS, uchar c) {
 	
-	if (type == OUT_DBG) {
-		dbg(c);
-	} else if (type == OUT_STD) {
-		switch (c) {
-			case '\n':
-				y += 1;
-				x  = 0;
-				if (y == maxrow) {
-					scroll(1);
-					y--;
-				}
-				set_cur(x,y,1);
-				return;
-			default:
-				//p = (y * maxcol + x) << 1;
-				VMEM_C(x,y)[1] = (unsigned char)attr;
-				VMEM_C(x,y)[0] = c;
-				x++;
-				if (x == maxcol) {
-					x = 0;
-					y++;
-				}
-				if (y == maxrow) {
-					scroll (1);
-					y--;
-				}
-				set_cur (x,y,1);
-				break;
-		}
+	switch (c) {
+/*		case '\n':
+			y += 1;
+			x  = 0;
+			if (y == maxrow) {
+				scroll(1);
+				y--;
+			}
+			set_cur(x,y,1);
+			return;*/
+		default:
+			//p = (y * maxcol + x) << 1;
+			VMEM_C(THIS->xpos,THIS->ypos)[1] = ((unsigned char)THIS->bg.index << 4) | (unsigned char)THIS->fg.index;
+			VMEM_C(THIS->xpos,THIS->ypos)[0] = c; //THIS->xpos+'0';
+			break;
 	}
 }
+static void k_cls() {
+        for (int i = 0; i < maxrow; i++) {
+                for (int j = 0; j < maxcol; j++) {
+                        VMEM_C(j,i)[0] = ' ';
+                        VMEM_C(j,i)[1] = 0x07;
+                }
+        }
+        //for (int i = 0; i < maxcol*maxrow*2; i+=2) {
+        //      vmem[i] = ' ';
+        //      vmem[i+1] = (unsigned char)0x07;
+        //}
+
+        // status line
+        //vm2 = vmem + (maxcol_p * maxrow * 2);
+        for (int s = 0; s < maxcol+1; s++) {
+                VMEM_C(s,maxrow)[0] = ' ';
+                VMEM_C(s,maxrow)[1] = (unsigned char)0x1f;
+                //*vm2++ = ' ';
+                //*vm2++ = (unsigned char)0x1f;
+        }
+        // scroller
+        scroll_p = 0;
+        for (int i = 0; i < maxrow; i++) {
+                VMEM_C(maxcol, i)[0] = (unsigned char)0xB1;
+                VMEM_C(maxcol, i)[1] = (unsigned char)0x70;
+        }
+        VMEM_C(maxcol, scroll_p + 1)[0] = (unsigned char)0xDB;
+
+        VMEM_C(maxcol, 0)[0] = (unsigned char)0x1E;
+        VMEM_C(maxcol, maxrow-1)[0] = (unsigned char)0x1F;
+        //vm2 = vmem + (maxcol * maxrow * 2);
+        VMEM_C(5,  maxrow)[0] = (unsigned char)0xb3;
+        VMEM_C(11, maxrow)[0] = (unsigned char)0xb3;
+        //vm2[10] = (unsigned char)0xb3;
+        //vm2[20] = (unsigned char)0xb3;
+}
+
+static void init_vga_text() {
+	set_font (default_font,0);
+	set_font (default_font,1);
+	CON.putchar = k_putchar_vga;
+	CON.cls = k_cls;
+	CON.mv_cur = set_cur;
+	// make sure that planes are correct...
+	char seq3;
+	outb (SEQ_ADDR_REG, 0x03);
+	seq3 = inb (SEQ_DATA_REG);
+	outb (SEQ_DATA_REG, 0x20);
+	CON.cls(&CON);
+	k_cls();
+}
+
 REGISTER_INIT(init_vga_text);

@@ -336,7 +336,7 @@ static void mv_cur (struct console* THIS) {
 	
 	vga_write_seq (0x12, 0x01);
 	vga_write_seq (0x13, 0x00);
-	int xpos = (THIS->xpos+1) * font->w;
+	int xpos = (THIS->xpos) * font->w;
 	int ypos = (THIS->ypos-1) * (font->h-1) + font->h - 2;
 
 	vga_write_seq (0x10 | (xpos & 0x07) << 5, (xpos >> 3) & 0xff);

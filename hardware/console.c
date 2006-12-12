@@ -3,12 +3,9 @@
 #include <kqueue.h>
 struct console CON;
 // struct font FON;
-extern char default_font[];
 static int gattr;
-extern volatile unsigned char* vmem;
 //extern struct font default_font[];
 char parse_csi(char in, struct CSI *status);
-int scroll_p;
 //void init_vga();
 void* get_vmem_base () {
 	char gc6;
@@ -178,16 +175,14 @@ void k_swrite(char* str, int type) { // {{{
 		case '\t': 
 			CON.xpos = ((CON.xpos & ~0x7) + 8);
 			break;
-		default: CON.xpos++;
-			 CON.putchar(&CON, *str);
+		default: CON.putchar(&CON, *str);
+			 CON.xpos++;
 			 break;
 	    	}
 	        CON.mv_cur(&CON);
 	    } 
-		//k_putchar(*str++, type, attr);
 	    str++;
 	}
-//	set_cur (0,0,0); // update console
 } // }}}
 // returns the character to output, or 
 // 	0 if none.
