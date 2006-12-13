@@ -58,7 +58,9 @@ void set_font(void* font, int plane) {
 	// Set height
 	outb (CRTC_ADDR_REG, 0x09);
 	unsigned char msl = inb (CRTC_DATA_REG);
-	outb (CRTC_DATA_REG, (msl & 0xe0) | 11);
+	outb (CRTC_DATA_REG, (msl & 0xe0) | 5);
+	vga_write_crt(0x0a, 0x05);
+	vga_write_crt(0x0b, 0x05);
 	
 	outb (SEQ_ADDR_REG, 0x01);
 	outb (SEQ_DATA_REG, inb(SEQ_DATA_REG | 0x01));

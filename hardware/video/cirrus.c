@@ -442,7 +442,7 @@ static void disp_char(struct console *THIS, uchar val) {
 	uchar* off_addr = lfb + VMEM_ADDR(off_x, off_y);
 	(void)off_addr;
 	(void)val;
-	int b = 0;
+	int b = -1;
 	unsigned char* glyph = font->glyphs+(font->glyph_size * val);
 	for (int i = 0; i < font->h; i++) {
 		unsigned char c = glyph[b];

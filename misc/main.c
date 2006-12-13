@@ -34,13 +34,14 @@ void k_main(void* mbd, unsigned int magic ) {
 		(*fn)();
 	}
 	pci_bind_drivers();
+	printf("fff\nc");
+	spin(4000000000);
 	do_multiboot (mbd);
 	init_serial();
 	
 	vmem = (unsigned char*)0xB8000;
 	//Multiboot crap.
 	//CON.cls(&CON);
-	spin(4000000000);
 	printf("test");
 	//k_cls();
 	if (magic != 0x2BADB002) { // not multiboot!

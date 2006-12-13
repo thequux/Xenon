@@ -114,7 +114,7 @@ extern struct font_t {
 	u8_t glyph_size;// the number of bytes in a glyph
 	u16_t nGlyphs;	// the number of glyphs
 	u8_t chkxor;	// the checkxor of the font; 
-			// the 16 bit checkxor if the entire font should be 0.
+			// the 8 bit checkxor if the entire font should be 0.
 			// Use this to make it so.
 	u8_t reserved;
 	u8_t glyphs[];	// the glyph data.
