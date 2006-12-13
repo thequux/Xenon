@@ -1,4 +1,7 @@
 #include <pci.h>
+#include <ctools.h>
+#include <driver.h>
+#include <video.h>
 
 #define PCI_CONFIG_ADDRESS 0xcf8
 #define PCI_CONFIG_DATA    0xcfc
@@ -199,7 +202,6 @@ VOID PciReadBases(PPCI_DEVICE_INFO Info)
       }
    }
 }
-*/
 
 BOOL PciFindDeviceByVendorId(USHORT VendorId,
                       int index,
@@ -233,12 +235,14 @@ BOOL PciFindDeviceByVendorId(USHORT VendorId,
    }
    return FALSE;
 }
-
-USHORT VmwSvgaIndex;
-USHORT VmwSvgaValue;
-PULONG  VmwFramebuffer;
-PULONG  VmwFifo;
-
+*/
+u16_t  VmwSvgaIndex;
+u16_t  VmwSvgaValue;
+u8_t *lfb;
+u32_t *VmwFifo;
+u32_t width, height,depth;
+#define VMEM_ADDR(x,y) (((y)*width*depth)+(x)*depth)
+/*
 BOOL DetectVmwareVideoAdapter(PPCI_DEVICE_INFO Info)
 {
    PCI_DEVICE_INFO dev;
@@ -259,48 +263,49 @@ BOOL DetectVmwareVideoAdapter(PPCI_DEVICE_INFO Info)
    return FALSE;
 }
 
+*/
+struct pci_dev *vmw_dev; // I'm practically guaranteed to only have one...
 
-VOID VmwSvgaOut(USHORT Index, ULONG Value)
+void VmwSvgaOut(u16_t Index, u32_t Value)
 {
-   WRITE_PORT_ULONG(VmwSvgaIndex, Index);
-   WRITE_PORT_ULONG(VmwSvgaValue, Value);
+   outl(VmwSvgaIndex, Index);
+   outl(VmwSvgaValue, Value);
 }
 
-ULONG VmwSvgaIn(USHORT Index)
+u32_t VmwSvgaIn(u16_t Index)
 {
-   WRITE_PORT_ULONG(VmwSvgaIndex, Index);
-   return READ_PORT_ULONG(VmwSvgaValue);
+   outl(VmwSvgaIndex, Index);
+   return inl(VmwSvgaValue);
 }
 
-BOOL VmwSetVideoMode(ULONG Width, ULONG Height, ULONG Bpp)
+BOOL VmwSetVideoMode(u32_t Width, u32_t Height, u32_t Bpp)
 {
-   PCI_DEVICE_INFO dev;
-   if (DetectVmwareVideoAdapter(&dev))
-   {
-      ULONG fb;
-      PciReadBases(&dev);
-      VmwSvgaIndex = dev.Bases[0].Address + SVGA_INDEX_PORT;
-      VmwSvgaValue = dev.Bases[0].Address + SVGA_VALUE_PORT;
+//      u32_t fb;
+      VmwSvgaIndex = (u16_t)(u32_t)(vmw_dev->bar[0].base + SVGA_INDEX_PORT);
+      VmwSvgaValue = (u16_t)(u32_t)(vmw_dev->bar[0].base + SVGA_VALUE_PORT);
 
       
       VmwSvgaOut(SVGA_REG_ID, SVGA_ID_2);
-      if (VmwSvgaIn(SVGA_REG_ID) !=  SVGA_ID_2)
+      if (VmwSvgaIn(SVGA_REG_ID) !=  (u32_t)SVGA_ID_2)
       {
          VmwSvgaOut(SVGA_REG_ID, SVGA_ID_1);
-         if (VmwSvgaIn(SVGA_REG_ID) != SVGA_ID_1)
+         if (VmwSvgaIn(SVGA_REG_ID) != (u32_t)SVGA_ID_1)
          {
             VmwSvgaOut(SVGA_REG_ID, SVGA_ID_0);
-            if (VmwSvgaIn(SVGA_REG_ID) != SVGA_ID_0)
+            if (VmwSvgaIn(SVGA_REG_ID) != (u32_t)SVGA_ID_0)
             {
                return FALSE;
             }
          }
       }
 
-      VmwFramebuffer = (PULONG)VmwSvgaIn(SVGA_REG_FB_START);
+      lfb = (u8_t *) VmwSvgaIn(SVGA_REG_FB_START);
 
+      width = Width;
+      height = Height;
+      depth = Bpp/8;
       VmwSvgaIn(SVGA_REG_FB_SIZE);
-      VmwFifo = (PULONG)VmwSvgaIn(SVGA_REG_MEM_START);
+      VmwFifo = (u32_t *) VmwSvgaIn(SVGA_REG_MEM_START);
       VmwSvgaIn(SVGA_REG_MEM_SIZE);
 
 
@@ -324,9 +329,64 @@ BOOL VmwSetVideoMode(ULONG Width, ULONG Height, ULONG Bpp)
 
 
       return TRUE;
-   }
-   else
-   {
-      return FALSE;
-   }
 }
+
+static void vmware_cls(struct console *THIS) {
+	for (long int i = 0; i < 1024 * 768 * 3; i++) {
+		lfb[i] =  0;
+	}
+	(void)THIS;
+}	
+static void disp_char(struct console *THIS, uchar val) {
+	int off_x = THIS->xpos * font->w;
+	int off_y = THIS->ypos * (font->h-1);
+	uchar* off_addr = lfb + VMEM_ADDR(off_x, off_y);
+	(void)off_addr;
+	(void)val;
+	int b = -1;
+	unsigned char* glyph = font->glyphs+(font->glyph_size * val);
+	for (int i = 0; i < font->h; i++) {
+		unsigned char c = glyph[b];
+		for (int j = 0; j < font->w; j++) {
+			if (j%8 == 0){
+				c = glyph[b++];
+			}
+			if (c & 0x80) {
+				*off_addr++ = THIS->fg.b;
+				*off_addr++ = THIS->fg.g;
+				*off_addr++ = THIS->fg.r;
+				off_addr++;
+			} else {
+				*off_addr++ = THIS->bg.b;
+				*off_addr++ = THIS->bg.g;
+				*off_addr++ = THIS->bg.r;
+				off_addr++;
+			}
+			c <<= 1;
+		}
+		off_addr = lfb + VMEM_ADDR(off_x, off_y++);
+	}
+}
+static void vmware_init(struct pci_dev *dev) {
+	vmw_dev = dev;
+	VmwSetVideoMode(1024,768,32);
+	vmware_cls(&CON);
+	for (int i = 0; i < 10; i++) {
+		(lfb + VMEM_ADDR(512,i))[0] = 0xff;
+		(lfb + VMEM_ADDR(512,i))[1] = 0xff;
+		(lfb + VMEM_ADDR(512,i))[2] = 0xff;
+	}
+//	asm("cli");
+//	asm("hlt");
+	CON.cls = vmware_cls;
+	CON.putchar = disp_char;
+	CON.cls(&CON);
+}
+static struct pci_driver vmware_drv[] __attribute__((unused))= {
+	{0x15AD,0x0405,vmware_init},
+	{0,0,NULL},
+};
+static void init(void) {
+	register_pci_driver(vmware_drv);
+}
+REGISTER_INIT(init);

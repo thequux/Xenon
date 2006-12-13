@@ -509,7 +509,7 @@ static struct pci_driver cirrus_drv[] __attribute__((unused))= {
 	{0x1013,0x00b8,cirrus_init},
 	{0,0,NULL},
 };
-void init(void) {
+static void init(void) {
 	register_pci_driver(cirrus_drv);
 }
 REGISTER_INIT(init);
