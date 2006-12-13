@@ -21,19 +21,19 @@ struct kalloc_desc {
 	BOOL		free;
 }; // 8-byte struct with 1 byte free...
 
-static struct kalloc_desc *alloc_tbl;
+extern struct kalloc_desc kalloc_tbl[];
 
 void kalloc_init() {
-	alloc_tbl = (struct kalloc_desc*) kalloc_pool;
+//	alloc_tbl = (struct kalloc_desc*) kalloc_pool;
 	block_count = kalloc_len / BLOCK_SIZE; 
 	alloc_tbl_overhead = (block_count * sizeof(struct kalloc_desc)) / BLOCK_SIZE;
 	for (int i = 0; i < block_count; i++) {
-		alloc_tbl[i].addr = (void*)(kalloc_pool + i);
-		alloc_tbl[i].index = i;
-		alloc_tbl[i].free = TRUE;
+		kalloc_tbl[i].addr = (void*)(kalloc_pool + i);
+		kalloc_tbl[i].index = i;
+		kalloc_tbl[i].free = TRUE;
 	}
 	for (int i = 0; i < alloc_tbl_overhead; i++) {
-		alloc_tbl[i].free = FALSE;
+		kalloc_tbl[i].free = FALSE;
 	}
 	
 	int len_sz, blk_sz;
@@ -76,7 +76,7 @@ void* kalloc (int count) {
 	int contig = 0;
 	int base = 0;
 	for (int i = alloc_tbl_overhead; i < block_count; i++) {
-		if (! alloc_tbl[i].free) {
+		if (! kalloc_tbl[i].free) {
 			if (!contig)
 				base = i;
 			contig ++;
@@ -86,7 +86,20 @@ void* kalloc (int count) {
 		if (contig >= count) break;
 	}
 	for (int i = base; i < count; i++) 
-		alloc_tbl[i].free = FALSE;
-	return alloc_tbl[base].addr;
+		kalloc_tbl[i].free = FALSE;
+	return kalloc_tbl[base].addr;
 }
 
+void mark_used (void* addr, int len) {
+	int offs = (char*)addr - (char*)kalloc_pool;
+	len += (offs%4096);
+	offs -= offs%4096;
+	offs /= 4096;
+	len = len + 4096 - len%4096;
+	len /= 4096;
+	while (len) {
+		kalloc_tbl[offs].free = FALSE;
+		offs++;
+		len--;
+	}
+}

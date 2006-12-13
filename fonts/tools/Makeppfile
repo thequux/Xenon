@@ -3,3 +3,9 @@ include std-defs.mk
 
 psf2raw: cnvshell.o psf2raw.o
 	gcc -o $(outputs) $(inputs) -lpsf
+
+psf2xff: cnvshell.o psf2xff.o
+	gcc -o $(outputs) $(inputs) -lpsf
+
+ckxor: ckxor.o
+	gcc -o $(outputs) $(inputs)

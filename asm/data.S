@@ -7,6 +7,7 @@ STACKSIZE equ 0x4000          ; that's 16k.
 [global gdt_handle]
 [global kalloc_pool]
 [global kalloc_len]
+[global kalloc_tbl]
 [extern _ebss]
 [global cpu_freq]
 
@@ -109,6 +110,7 @@ align 4096
 kpdb:	resb 4096
 kpt0:	resb 4096
 
+kalloc_tbl: resb (8*MEM_POOL_LEN/4096)
 align 32
 stack: ; {{{
    resb STACKSIZE      ; reserve 16k stack on a quadword boundary

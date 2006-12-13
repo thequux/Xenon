@@ -1,0 +1,2 @@
+hush: hush.c
+	gcc -o hush hush.c -std=gnu99 -O3

@@ -1,0 +1,4 @@
+
+include std-defs.mk
+
+OBJS	:= vga_text.o cirrus.o gee_whiz.o

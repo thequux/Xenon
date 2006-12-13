@@ -2,25 +2,28 @@ VERBOSE=
 $(phony default): boot.img
 
 include std-defs.mk
-prebuild += tools/ccdv
+prebuild tools/hush
 
 
 boot.img: krnl-s menu.lst boot.img.tmpl
-	cp boot.img.tmpl boot.img
-	mount -o loop boot.img /mnt/floppy
-	cat krnl-s | gzip -9 > /mnt/floppy/boot/krnl-1.gz
-	cp menu.lst /mnt/floppy/boot/grub/menu.lst
-	umount /mnt/floppy
+	@$(HUSH) "Creating boot image" cp boot.img.tmpl boot.img
+	@mount -o loop boot.img /mnt/floppy
+	@cp krnl-s krnl-1
+	@-rm krnl-1.gz 2>/dev/null
+	@gzip -9 krnl-1
+	@$(HUSH) "    Copying kernel" cp krnl-1.gz /mnt/floppy/boot/krnl-1.gz
+	@$(HUSH) "    Copying menu.lst" cp menu.lst /mnt/floppy/boot/grub/menu.lst
+	@$(HUSH) "Finalizing boot image" umount /mnt/floppy
 
 tools/ccdv: tools/ccdv.c
 	gcc -o tools/ccdv tools/ccdv.c
 
 krnl-s: krnl
-	@ccdv objcopy -g krnl krnl-s
+	@$(HUSH) "Stripping kernel" objcopy -g krnl krnl-s
 
 krnl: asm/built-in.o misc/built-in.o hardware/built-in.o link.ld
-	@ccdv ld  $(LDFLAGS) -o $@ $(filter-out link.ld, $^) -Map krnl.map
-	@ccdv tools/map2sym.sh krnl.map krnl.sym
+	@$(HUSH) "Linking kernel" ld  $(LDFLAGS) -o $@ $(filter-out link.ld, $^) -Map krnl.map
+	@$(HUSH) "Building symbol map" tools/map2sym.sh krnl.map krnl.sym
 
 $(phony clean):
 	-rm  $(filter_out boot.img, $(only_targets **/*)) krnl.map krnl.sym  2>/dev/null

@@ -7,20 +7,12 @@
 #include "config.h"
 // Standard C defines; also, data types
 #define NULL ((void*)(0))
-#ifdef CPLUSPLUS
-#  define BOOL bool
-#  define TRUE true
-#  define FALSE false
-#else
-#  define BOOL char
-#  define FALSE (0)
-#  define TRUE  (! FALSE)
-#endif
 
 int strlen(void* str);
 
 void spin(unsigned long int cycles);
 void dbg(char c);  /* in asm */
+void panic();
 int parse_scbuf (unsigned char* buf);
 int memcpy (void* dest, const void* src, int count);
 int memset (void* buf, int val, int count);
