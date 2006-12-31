@@ -3,6 +3,7 @@
 // Covered under the MIT license
 // CirrusFB driver
 #include <pci.h>
+#include <kalloc.h>
 #define VMEM_ADDR(x,y) (((y)*1024*3)+(x)*3)
 
 //static unsigned char* cur; // +(1024*3*427) - 341*3 - 1;
@@ -471,7 +472,15 @@ void init_vga() {
 	set_parm(0,0,0);
 	init_chip();
 	set_parm(0,0,0);
-	lfb = ((unsigned char*)0xe0000000)  + 0x140000; // +(1024*3*427) - 341*3 - 1;
+
+      pginfo.dir[1022].base = 0xe0000000 >> 12;
+      pginfo.dir[1022].g = 0;
+      pginfo.dir[1022].ps = 1;
+      pginfo.dir[1022].pwt = 1;
+      pginfo.dir[1022].w = 1;
+      pginfo.dir[1022].p = 1;
+      asm volatile ("pushl %ecx\n\tmovl %cr3, %ecx\n\tmovl %ecx, %cr3\n\tpopl %ecx");
+	lfb =  ((unsigned char*)0xff800000)  + 0x140000; // +(1024*3*427) - 341*3 - 1;
 	
 	//setup cursor
 	vga_write_seq (0x12, 0x02);
@@ -480,7 +489,7 @@ void init_vga() {
 	vga_write_att (0x00, 0x00);
 	vga_write_att (0x0f, 0xff);
 	vga_write_seq (0x12, 0x01);
-	memcpy(((unsigned char*)0xe03fc000), dflt_cur, 256);
+	memcpy(((unsigned char*)0xffbfc000), dflt_cur, 256);
 	cur_x = 0;
 	CON.xpos = 0;
 	CON.ypos = 0;
@@ -499,17 +508,17 @@ void init_vga() {
 	//gee_whiz();
 }
 
-static void cirrus_init (struct pci_dev *dev) {
+static void cirrus_init_pci (struct pci_dev *dev) {
 	init_vga();
 	CON.cls(&CON);
 	(void)dev;
 //	printf ("CIRRUSFB: %d:%d.%d\n", dev->bus, dev->slot, dev->func);
 }
 static struct pci_driver cirrus_drv[] __attribute__((unused))= {
-	{0x1013,0x00b8,cirrus_init},
+	{0x1013,0x00b8,cirrus_init_pci},
 	{0,0,NULL},
 };
-static void init(void) {
+static void cirrus_init(void) {
 	register_pci_driver(cirrus_drv);
 }
-REGISTER_INIT(init);
+REGISTER_INIT(cirrus_init);

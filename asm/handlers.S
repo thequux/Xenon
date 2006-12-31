@@ -594,44 +594,34 @@ int_0D : ; {{{3
 		call dbgs
 		add esp, 4
 		;popa
-		jmp crash
-		push DWORD 0x00
-		jmp int_08
-		mov al, '0'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 'D'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
 	popa
 	sti
 	iret
 	.err: db 'General Protection fault!', 0x0d, 0x0a, 0x00
 
 int_0E : ; {{{3
-	cli
+	cli ; paging
 	pusha
-		mov al, '0'
-		push DWORD eax
+		push DWORD .msg
+		call dbgs
+		add esp, 4
+		mov eax, cr2
+		call dbgr
+		push DWORD .msg2
+		call dbgs
+		add esp, 4
+		mov eax, [esp+36]
+		call dbgr
+		push DWORD 0x0d
 		call dbg
-		add esp, BYTE 4
-		mov al, 'E'
-		push DWORD eax
+		push DWORD 0x0a
 		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
+		add esp, 8
 	popa
-	sti
+	add esp, 4
 	iret
+	.msg:  db 'PageFault @ ', 0x00
+	.msg2: db ' (EIP: ', 0x00
 int_0F : ; {{{3
 	cli
 	pusha
@@ -5316,7 +5306,7 @@ idt_handle: ; {{{2
 
 init_idesc:
 	mov ebx, handlers
-	mov cx, 0x100
+	mov ecx, 0x100
 .begin:				;	eax	ebx+2	ebx+6
 	xchg ax, WORD [ebx+2]	;	ebx+2	eax	ebx+6
 	xchg ax, WORD [ebx+6]	;	ebx+6	eax	ebx+2

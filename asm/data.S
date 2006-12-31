@@ -10,6 +10,11 @@ STACKSIZE equ 0x4000          ; that's 16k.
 [global kalloc_tbl]
 [extern _ebss]
 [global cpu_freq]
+[global KERNEL_VIRTUAL_BASE]
+[global kpdb]
+[global kpt0]
+KERNEL_VIRTUAL_BASE equ 0xC0000000
+KERNEL_PAGE_NUMBER equ (KERNEL_VIRTUAL_BASE >> 22)
 
 %macro segdesc 3.nolist	; segd base limit type {{{
 	%assign type %3			; type is 0bP-DPL-S-Type
@@ -39,8 +44,7 @@ STACKSIZE equ 0x4000          ; that's 16k.
 	db  ((base  >> 8 ) & 0xff)
 	db  ((base  >> 16) & 0xff)
 	db  ((type       ) & 0xff) 
-	db (((limit >> 16) & 0xf )  \
-	    | gran )
+	db (((limit >> 16) & 0xf ) |  gran )
 	db  ((base  >> 24) & 0xff)
 %endmacro ; }}}
 

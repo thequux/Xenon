@@ -28,6 +28,7 @@ static void dbgb (char t) {
 	
 }
 void do_multiboot(void* mbd);
+void read_test();
 void k_main(void* mbd, unsigned int magic ) {
 	init_con();
 	for (initfn *fn = &_init_start; fn != &_init_end; fn++) {
@@ -35,10 +36,10 @@ void k_main(void* mbd, unsigned int magic ) {
 	}
 	pci_bind_drivers();
 	printf("fff\nc");
-	spin(4000000000);
+//	spin(4000000000);
 	do_multiboot (mbd);
 	init_serial();
-	
+	read_test();
 	vmem = (unsigned char*)0xB8000;
 	//Multiboot crap.
 	//CON.cls(&CON);

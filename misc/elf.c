@@ -5,8 +5,12 @@
 void print_symtab(int num, int size,
 		  void* addr, int shndx) {
 	(void)size;
+	(void)num;
+	(void)addr;
+	(void)shndx;
+	return;
 	char* str_tab = (char*)(((Elf32_Shdr*)addr + shndx)->sh_addr);
-	Elf32_Sym * symtab;
+	Elf32_Sym * symtab = 0;
 	for (int i = 0; i <= num; i++) {
 		printf ("%24s]\t%08x\n",
 			str_tab+((Elf32_Shdr*)addr+i)->sh_name,

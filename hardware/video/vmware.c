@@ -2,6 +2,7 @@
 #include <ctools.h>
 #include <driver.h>
 #include <video.h>
+#include <kalloc.h>
 
 #define PCI_CONFIG_ADDRESS 0xcf8
 #define PCI_CONFIG_DATA    0xcfc
@@ -89,181 +90,13 @@ enum {
 #define    SVGA_FIFO_MAX         1
 #define    SVGA_FIFO_NEXT_CMD   2
 #define    SVGA_FIFO_STOP         3
-/*
-typedef struct PCI_BASE
-{
-   BYTE  Space;
-   BYTE  Type;
-   BYTE  Prefetch;
-   DWORD Address;
-}PCI_BASE, *PPCI_BASE;
-
-typedef struct PCI_DEVICE_INFO
-{
-   USHORT DeviceId;
-   USHORT VendorId;
-   int      ClassCode;
-   int      SubClass;
-   int    Bus;
-   int    Device;
-   int    Function;
-   PCI_BASE Bases[6];
-}PCI_DEVICE_INFO, *PPCI_DEVICE_INFO;
-
-#pragma pack(push, 1)
-
-typedef struct PCI_CONFIG
-{
-  UCHAR Reg    : 8;
-  UCHAR Func   : 3;
-  UCHAR Dev    : 5;
-  UCHAR Bus    : 8;
-  UCHAR Rsvd   : 7;
-  UCHAR Enable : 1;
-}PCI_CONFIG, *PPCI_CONFIG;
-
-#pragma pack(pop)
-
-
-ULONG PciReadConfig(ULONG bus, ULONG device,
-               ULONG function, ULONG reg)
-{
-   PCI_CONFIG c;
-   PULONG n;
-   USHORT base;
-   c.Enable = 1;
-   c.Rsvd = 0;
-   c.Bus = bus;
-   c.Dev = device;
-   c.Func = function;
-   c.Reg = reg & 0xfc;
-   n = (PULONG)((PVOID)&c);
-   WRITE_PORT_ULONG(0xcf8, *n);
-   base = 0xcfc + (reg & 0x03);
-   return READ_PORT_ULONG(base);
-}
-*/
-/*
-VOID PciWriteConfig(ULONG bus, ULONG device,
-                 ULONG function, ULONG reg,
-                 ULONG value)
-{
-   PCI_CONFIG c;
-   PULONG n;
-   USHORT base;
-   c.Enable = 1;
-   c.Rsvd = 0;
-   c.Bus = bus;
-   c.Dev = device;
-   c.Func = function;
-   c.Reg = reg & 0xfc;
-   n = (PULONG)((PVOID)&c);
-   WRITE_PORT_ULONG(0xcf8, *n);
-   base = 0xcfc + (reg & 0x03);
-   WRITE_PORT_ULONG(base, value);
-}
-
-VOID PciGetDeviceInfo(PPCI_DEVICE_INFO info,
-                 ULONG bus,
-                 ULONG device,
-                 ULONG function)
-{
-   ULONG r;
-
-   r = PciReadConfig(bus, device, function, 0);
-   info->VendorId = r & 0xffff;
-   info->DeviceId = (r >> 16) & 0xffff;
-   r = PciReadConfig(bus, device, function, 8);
-   info->ClassCode = r >> 24;
-   info->SubClass  = (r >> 16) & 0xff;
-   info->Bus = bus;
-   info->Device = device;
-   info->Function = function;
-}
-
-VOID PciReadBases(PPCI_DEVICE_INFO Info)
-{
-   int i;
-   ULONG l;
-
-   for (i = 0; i < 6; i++) {
-      l = PciReadConfig(Info->Bus, Info->Device, Info->Function, 0x10 + i*4);
-      if (l & 0x01) {
-         Info->Bases[i].Space    = PCI_SPACE_IO;
-         Info->Bases[i].Type     = 0;
-         Info->Bases[i].Prefetch = 0;
-         Info->Bases[i].Address  = l & (~0x03);
-      }
-      else {
-         Info->Bases[i].Space    = PCI_SPACE_MEMORY;
-         Info->Bases[i].Type     = (l >> 1)&0x03;
-         Info->Bases[i].Prefetch = (l >> 3)&0x01;
-         Info->Bases[i].Address  = l & (~0x0f);
-      }
-   }
-}
-
-BOOL PciFindDeviceByVendorId(USHORT VendorId,
-                      int index,
-                      PPCI_DEVICE_INFO Info)
-{
-   PCI_DEVICE_INFO info;
-   int bus;
-   int fun;
-   int dev;
-
-   for (bus = 0; bus < 256; bus++) {
-      for (dev = 0; dev < 32; dev++) {
-         for (fun = 0; fun < 8; fun++) {
-            PciGetDeviceInfo(&info, bus, dev, fun);
-            if (info.VendorId == VendorId) {
-               if (!index) {
-                  Info->Bus = bus;
-                  Info->Device = dev;
-                  Info->Function = fun;
-                  Info->DeviceId = info.DeviceId;
-                  Info->VendorId = info.VendorId;
-                  Info->ClassCode = info.ClassCode;
-                  Info->SubClass = info.SubClass;
-                  return TRUE;
-               }
-               else
-                  index--;
-            }
-         }
-      }
-   }
-   return FALSE;
-}
-*/
 u16_t  VmwSvgaIndex;
 u16_t  VmwSvgaValue;
 u8_t *lfb;
 u32_t *VmwFifo;
 u32_t width, height,depth;
 #define VMEM_ADDR(x,y) (((y)*width*depth)+(x)*depth)
-/*
-BOOL DetectVmwareVideoAdapter(PPCI_DEVICE_INFO Info)
-{
-   PCI_DEVICE_INFO dev;
-   int index = 0;
 
-   while (1) {
-      if (!PciFindDeviceByVendorId(VMWARE_VENDOR_ID, index, &dev))
-         break;
-      else {
-         if (dev.DeviceId == 0x405) {
-            if (Info != NULL)
-               memcpy(Info, &dev, sizeof(PCI_DEVICE_INFO));
-            return TRUE;
-         }
-         index++;
-      }
-   }
-   return FALSE;
-}
-
-*/
 struct pci_dev *vmw_dev; // I'm practically guaranteed to only have one...
 
 void VmwSvgaOut(u16_t Index, u32_t Value)
@@ -299,8 +132,13 @@ BOOL VmwSetVideoMode(u32_t Width, u32_t Height, u32_t Bpp)
          }
       }
 
-      lfb = (u8_t *) VmwSvgaIn(SVGA_REG_FB_START);
-
+      pginfo.dir[1022].base = (VmwSvgaIn(SVGA_REG_FB_START)) >> 12;
+      pginfo.dir[1022].g = 0;
+      pginfo.dir[1022].ps = 1;
+      pginfo.dir[1022].pwt = 1;
+      pginfo.dir[1022].w = 1;
+      pginfo.dir[1022].p = 1;
+      
       width = Width;
       height = Height;
       depth = Bpp/8;
@@ -367,7 +205,7 @@ static void disp_char(struct console *THIS, uchar val) {
 		off_addr = lfb + VMEM_ADDR(off_x, off_y++);
 	}
 }
-static void vmware_init(struct pci_dev *dev) {
+static void vmware_init_pci(struct pci_dev *dev) {
 	vmw_dev = dev;
 	VmwSetVideoMode(1024,768,32);
 	vmware_cls(&CON);
@@ -383,10 +221,10 @@ static void vmware_init(struct pci_dev *dev) {
 	CON.cls(&CON);
 }
 static struct pci_driver vmware_drv[] __attribute__((unused))= {
-	{0x15AD,0x0405,vmware_init},
+	{0x15AD,0x0405,vmware_init_pci},
 	{0,0,NULL},
 };
-static void init(void) {
+static void vmware_init(void) {
 	register_pci_driver(vmware_drv);
 }
-REGISTER_INIT(init);
+REGISTER_INIT(vmware_init);

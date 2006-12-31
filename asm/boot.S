@@ -1,42 +1,3 @@
-%if 0 ; {{{
-format ELF
-
-macro segdesc base limit type ; {{{
-{
-	local gran
-	if (limit rsh 1) > 0x7ffff
-		if (limit and 0xfff) != 0xfff
-			display 'Segment limit is invalid', 13, 10
-		end if
-		gran = 0x60
-		limit = (limit rsh 12)
-	else
-		gran = 0x40
-	end if
-	db  ((limit       ) and 0xff)
-	db  ((limit rsh  8) and 0xff)
-	db  ((base        ) and 0xff)
-	db  ((base  rsh  8) and 0xff)
-	db  ((base  rsh 16) and 0xff)
-	db  ((type        ) and 0xff)
-	db (((limit rsh 16) and 0x0f) or gran)
-	db  ((base  rsh 24) and 0xff)
-}
-; }}}
-maxro outb value port ; {{{
-{
-	mov al, %2
-	if port < 0xff
-		out port, al
-	else
-		mov dx, port
-		out dx, al
-	end if
-}
-; }}}
-if 0
-%endif 
-; }}}
 %macro outb 2.nolist ; {{{
 	mov dx, %1
 	mov al, %2
@@ -65,23 +26,51 @@ if 0
 [extern gdt_handle]
 [extern STACK_TOP]
 [extern cpu_freq]
+[extern kpdb]
+[extern kpt0]
 [BITS 32]
 [extern k_main] ; this is in the C source as k_main
 ; }}}
 PIC_IRQ_BASE equ 0x20
+
 section .text ; {{{
 _start: ; {{{
 	cli
 	;hlt
 	;jmp _start
 	mov esp, STACK_TOP
+	sub esp, 0xc0000000
 	push eax
 	push ebx
+_bkpt:
+	; setup paging
+	
+	mov eax, 0x00000083
+	mov ebx, kpdb
+	sub ebx, 0xc0000000
+	mov [ebx], eax
+	mov [ebx+0x300*4], eax
+	mov DWORD [ebx+0x301*4], 0x00001083
+	mov ecx, ebx
+	lea ebx, [ecx+0x3ff*4]
+	mov DWORD [ebx], ecx
+	and DWORD [ebx], 0xfffff000
+	or DWORD [ebx], 100001011b
+	mov cr3, ecx
+	mov edx, cr4
+	or edx, 0x10
+	mov cr4, edx
+	mov edx, cr0
+	or edx, 0x80000000
+	mov cr0, edx
+	lea eax, [.pge]
+	jmp eax
+.pge:
+	mov eax, init_idesc
+	mov esp, STACK_TOP+0x16
 	call init_idesc
 	mov [apm_info.valid], DWORD 0x00
-_bkpt:
 	;mov esp, stack+STACKSIZE
-	
 	lgdt [gdt_handle]
 	lidt [idt_handle]
 	mov ax, 0x10
@@ -96,6 +85,7 @@ _bkpt:
 	call cpuspeed
 	call prog_pic
 	sti
+	mov esp, STACK_TOP+0x08
 	call k_main	; start C
 	jmp .tst
 	mov eax, 1
