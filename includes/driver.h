@@ -1,12 +1,14 @@
 #include <ctools.h>
+#include <types.h>
 #ifndef XE_DRIVER_H
 #define XE_DRIVER_H
 
 /// Yuck. Will fix this braindamage ASAP.
 #define DRV(contents) union {char __fill[128]; struct { contents }; }
-#define __init __attribute__((section(".initcall"),unused ))
+#define __init __attribute__((section(".initcall"),used ))
 typedef void (*initfn)(void);
-#define REGISTER_INIT(fn)    initfn __init$##fn __init = fn;
+#define REGISTER_INIT(fn)  static initfn __init$##fn __init = fn;
+// static initfn __discard$##fn () __attribute__((section(".discard"), used )) ; static initfn __discard$##fn () {return __init$##fn;}
 extern initfn _init_start, _init_end;
 // The wad of registers passed to a driver... I'm sure this interface
 // will change, and I'm hoping that I can get rid of this ASAP. 

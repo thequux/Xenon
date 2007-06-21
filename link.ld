@@ -33,5 +33,8 @@ SECTIONS
         *(COMMON)
         _ebss = .;
     }
+    /DISCARD/ : {
+    	*(.discard)
+    }
     pginfo = 0xffc00000;
 }

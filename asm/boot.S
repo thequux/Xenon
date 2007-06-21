@@ -51,6 +51,7 @@ _bkpt:
 	mov [ebx], eax
 	mov [ebx+0x300*4], eax
 	mov DWORD [ebx+0x301*4], 0x00001083
+	;mov DWORD [ebx+0x302*4], 0x00401083
 	mov ecx, ebx
 	lea ebx, [ecx+0x3ff*4]
 	mov DWORD [ebx], ecx
@@ -67,7 +68,7 @@ _bkpt:
 	jmp eax
 .pge:
 	mov eax, init_idesc
-	mov esp, STACK_TOP+0x16
+	mov esp, STACK_TOP-0x16
 	call init_idesc
 	mov [apm_info.valid], DWORD 0x00
 	;mov esp, stack+STACKSIZE
@@ -85,7 +86,7 @@ _bkpt:
 	call cpuspeed
 	call prog_pic
 	sti
-	mov esp, STACK_TOP+0x08
+	mov esp, STACK_TOP-0x08
 	call k_main	; start C
 	jmp .tst
 	mov eax, 1
@@ -265,8 +266,8 @@ prog_pic: ; {{{
 ;	outb 0xA1, 0x00
 
 	;outb 0x21, 0xe7
-	outb 0x21, 11100101b
-	outb 0xA1, 11111111b
+	outb 0x21, 11100001b
+	outb 0xA1, 11101111b
 	;mov al, 0x20
 	;out 0x20, al
 	;mov al, 0x11

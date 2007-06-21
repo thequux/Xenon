@@ -5,7 +5,7 @@
 #define TARGET_BOCHS	1
 #define TARGET_QEMU	2
 
-#define TARGET	TARGET_QEMU
+#define TARGET	TARGET_NATIVE
 
 #include <target_cfg.h>
 

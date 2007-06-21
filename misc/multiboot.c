@@ -107,7 +107,7 @@ void do_multiboot(struct mboot_info *mbd) {
 			}
 		}
 	}
-	if (mbd->flags & MBI_APMINFO) {
+	if (mbd->flags & MBI_APMINFO)  {
 		// apm avaliable...
 		apm_info.valid = ~ 0x0;
 		apm_info.version = mbd->apm_table->version;

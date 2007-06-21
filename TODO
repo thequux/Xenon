@@ -9,7 +9,7 @@ __EOF__
 }
 function src() {
 cat <<__EOF__ | grep -v "^#"
-kalloc			bare_elf
+kalloc			.
 bare_elf		.
 all_ansi_codes		.
 keyboard		all_ansi_codes
@@ -20,7 +20,8 @@ io_system		io_interface keyboard all_ansi_codes
 shell			keyboard
 userspace		level_switching filesystem io_interface libc
 libc			filesystem io_system elf posix kalloc
-paging			elf disk
+paging			.
+swap 			paging elf disk
 filesystem		disk ext2 mbr shell
 disk			.
 ext2			mbr disk shell
@@ -33,7 +34,7 @@ exec			elf syscall
 fork			processes syscall
 open			filesystem syscall io_system
 close			open
-processes		level_switching paging
+processes		level_switching swap
 user_shell		libc userspace
 __EOF__
 }

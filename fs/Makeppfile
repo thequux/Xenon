@@ -1,0 +1,3 @@
+include std-defs.mk
+OBJS	:= ext2.o
+

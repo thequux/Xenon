@@ -58,7 +58,7 @@ void set_font(void* font, int plane) {
 	// Set height
 	outb (CRTC_ADDR_REG, 0x09);
 	unsigned char msl = inb (CRTC_DATA_REG);
-	outb (CRTC_DATA_REG, (msl & 0xe0) | 5);
+	outb (CRTC_DATA_REG, (msl & 0xe0) | 15);
 	vga_write_crt(0x0a, 0x05);
 	vga_write_crt(0x0b, 0x05);
 	
@@ -88,7 +88,7 @@ void set_cur (struct console *THIS) {
 	
 	int np;
 	char nph, npl;
-	np = (THIS->xpos-1) * maxcol_p + THIS->ypos;
+	np = (THIS->ypos-0) * maxcol_p + THIS->xpos;
 	nph = ((np & 0xff00) >> 8);
 	npl = np & 0xff;
 	int reg = ((inb(0x3cc)&0x01)?0x3D4:0x3B4);
@@ -98,19 +98,24 @@ void set_cur (struct console *THIS) {
 	outb (reg+1, nph);
 
 }
-void scroll(int lines) {
+void scroll(struct console *THIS __attribute__((unused)), int lines) {
 	int l1 = 0, l2 = lines;
 	while (l2 < maxrow) {
-		for (int i = 0; i < maxcol * 2; i++)
-			vmem[l1 * maxcol_p * 2 + i] = vmem[l2*maxcol_p*2 + i];
+		for (int i = 0; i < maxcol; i++) {
+			VMEM_C(i, l1)[0] = VMEM_C(i, l2)[0];
+			VMEM_C(i, l1)[1] = VMEM_C(i, l2)[1];
+		}
+//			vmem[l1 * maxcol_p * 2 + i] = vmem[l2*maxcol_p*2 + i];
 		l1++;
 		l2++;
 	}
 
 	while (l1 < maxrow) {
-		for (int i = 0; i < maxcol * 2; i+=2) {
-			vmem[l1 * maxcol_p * 2 + i] = ' ';
-			vmem[l1 * maxcol_p * 2 + i+1] = 0x07;
+		for (int i = 0; i < maxcol; i++) {
+			VMEM_C(i, l1)[0] = ' ';
+			VMEM_C(i, l1)[1] = 0x07;
+//			vmem[l1 * maxcol_p * 2 + i] = ' ';
+//			vmem[l1 * maxcol_p * 2 + i+1] = 0x07;
 		}
 		l1 ++;
 	}
@@ -182,6 +187,7 @@ static void init_vga_text() {
 	CON.putchar = k_putchar_vga;
 	CON.cls = k_cls;
 	CON.mv_cur = set_cur;
+	CON.scroll = scroll;
 	// make sure that planes are correct...
 	char seq3;
 	outb (SEQ_ADDR_REG, 0x03);

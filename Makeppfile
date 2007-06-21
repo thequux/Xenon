@@ -1,4 +1,5 @@
 VERBOSE=
+SUBDIRS=asm misc hardware
 $(phony default): boot.img
 
 include std-defs.mk
@@ -21,7 +22,7 @@ tools/ccdv: tools/ccdv.c
 krnl-s: krnl
 	@$(HUSH) "Stripping kernel" objcopy -g krnl krnl-s
 
-krnl: asm/built-in.o misc/built-in.o hardware/built-in.o link.ld
+krnl: $(SUBDIRS)/built-in.o link.ld
 	@$(HUSH) "Linking kernel" ld  $(LDFLAGS) -o $@ $(filter-out link.ld, $^) -Map krnl.map
 	@$(HUSH) "Building symbol map" tools/map2sym.sh krnl.map krnl.sym
 

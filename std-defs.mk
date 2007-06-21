@@ -9,7 +9,7 @@ CCDV = $(find_upwards tools/ccdv)
 CC = gcc
 NASM = nasm
 ifndef XE_HOSTED
-CFLAGS		:= --std=gnu99 -march=prescott -O1 -g -nostartfiles -nodefaultlibs -nostdlib -Wall -Wextra -Werror $(INCLUDES) -fno-builtin 
+CFLAGS		:= --std=gnu99 -march=prescott -O0 -g -nostartfiles -nodefaultlibs -nostdlib -Wall -Wextra -Werror $(INCLUDES) -fno-builtin  -fkeep-static-consts
 ASFLAGS_WARN	:= -w+macro-params -w+macro-selfref -w+orphan-labels -w+gnu-elf-extensions
 ASFLAGS		:= -f elf -F stabs -g $(ASFLAGS_WARN)
 LDFLAGS		:= -T link.ld -z defs -nostdlib
@@ -31,6 +31,6 @@ endif
 	@$(HUSH) "Compiling $<" $(CC) $(CFLAGS) -c $<
 
 ifndef XE_HOSTED
-built-in.o: $(OBJS)
-	@$(HUSH) "Linking built-in.o" ld -r -nostdlib -o $(output) $(inputs)
+built-in.o: $(OBJS) $(if $(SUBDIRS),$(SUBDIRS)/built-in.o,)
+	@$(HUSH) "Linking built-in.o" ld -r $(find-upwards ilink.ld) -nostdlib -o $(output) $(inputs)
 endif

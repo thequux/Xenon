@@ -617,6 +617,9 @@ int_0E : ; {{{3
 		push DWORD 0x0a
 		call dbg
 		add esp, 8
+		mov ecx, 0xffffff
+		.lop: nop
+		loop .lop
 	popa
 	add esp, 4
 	iret
@@ -1185,20 +1188,16 @@ int_2B : ; {{{3
 	sti
 	iret
 int_2C : ; {{{3
+	jmp int_21
 	cli
 	pusha
-		mov al, '2'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 'C'
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
-		mov al, 0x0a
-		push DWORD eax
-		call dbg
-		add esp, BYTE 4
+		mov eax, 0
+		in al, 0x60
+		push eax
+		call sc_proc
+		outb 0x20, 0x20
+		outb 0xa0, 0x20
+		add esp, 4
 	popa
 	sti
 	iret

@@ -6,8 +6,9 @@
 
 #include "config.h"
 // Standard C defines; also, data types
+#ifndef NULL
 #define NULL ((void*)(0))
-
+#endif
 int strlen(void* str);
 
 void spin(unsigned long int cycles);

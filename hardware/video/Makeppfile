@@ -1,4 +1,4 @@
 
 include std-defs.mk
 
-OBJS	:= vga_text.o cirrus.o gee_whiz.o vmware.o
+OBJS	:= vga_text.o cirrus.o gee_whiz.o vmware.o gtf.o

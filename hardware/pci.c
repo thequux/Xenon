@@ -12,7 +12,7 @@
 struct pci_dev pci_devs[128];
 int devCount;
 struct pci_driver *drivers[128];
-int drv_count;
+int drv_count = 0;
 inline unsigned long pciAddress (unsigned short bus, unsigned short slot,
 			  unsigned short func, unsigned short offset) {
 	return (unsigned long)(

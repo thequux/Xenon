@@ -29,7 +29,10 @@ static void dbgb (char t) {
 }
 void do_multiboot(void* mbd);
 void read_test();
+
+int useDebug;
 void k_main(void* mbd, unsigned int magic ) {
+	useDebug = 1;
 	init_con();
 	for (initfn *fn = &_init_start; fn != &_init_end; fn++) {
 		(*fn)();
@@ -39,16 +42,13 @@ void k_main(void* mbd, unsigned int magic ) {
 //	spin(4000000000);
 	do_multiboot (mbd);
 	init_serial();
-	read_test();
+	//read_test();
 	vmem = (unsigned char*)0xB8000;
 	//Multiboot crap.
 	//CON.cls(&CON);
 	printf("test");
 	//k_cls();
-	if (magic != 0x2BADB002) { // not multiboot!
-		k_swrite("\e[1;44;37mI'm a multiboot kernel, dammit! Use a multiboot bootloader!", OUT_STD);
-		panic();
-	}
+	if (magic != 0x2BADB002) { /* not multiboot! */ k_swrite("\e[1;44;37mI'm a multiboot kernel, dammit! Use a multiboot bootloader!", OUT_STD); panic(); }
 //	init_vga();
 	//k_s_char('a');
 	printf ("Clock speed: %d\n", cpu_freq.low); //(int)cpf, (int)(1000*(cpf-(int)cpf)));

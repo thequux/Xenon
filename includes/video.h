@@ -10,8 +10,6 @@ void init_con();
 
 void set_font (void* font, int plane);
 
-void scroll (int lines);
-
 int printf(const char* template, ...);
 
 #define GRAPHICS_ADDR_REG	0x3CE
@@ -90,6 +88,7 @@ extern struct console {
 	void (*putchar)(struct console* THIS, uchar buf);
 	void (*cls)  (struct console* THIS);
 	void (*mv_cur) (struct console* THIS);
+	void (*scroll) (struct console* THIS, int delta);
 	//Data
 	struct color fg;
 	struct color bg;
@@ -98,14 +97,30 @@ extern struct console {
 	int w; // pixels
 	int h; // pixels
 	BOOL intense;
+
+	// FB stuff
+	BOOL bitmap;
+	// if bitmap is TRUE, the following is valid
+	int bpp;
+	int rlen, roff,
+	    glen, goff,
+	    blen, boff;
+	int xres, yres, llen;
+	char* lfb;
+	int offset;
 	// private...
 	int old_xpos, old_ypos;
 	// CSI parsing
 	BOOL esc;
-	struct CSI csibuf;
-		
+	struct CSI csibuf;	
 } CON;
 
+struct mode
+{
+    int hr, hss, hse, hfl;
+    int vr, vss, vse, vfl;
+    float pclk, h_freq, v_freq;
+};
 
 extern struct font_t {
 	u8_t w;		// width in pixels
@@ -170,5 +185,6 @@ struct console {
 };
 #endif
 
+struct mode calc_gtf(int xres, int yres, int freq);
 extern struct color colors[];
 #endif

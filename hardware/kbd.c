@@ -1,8 +1,11 @@
 #include "ctools.h"
 #include "video.h"
+#include <kqueue.h>
 void apply_mod (int *xlated, int *mod) ;
 void powerdown();
 
+char input_buf[128];
+int input_ct;
 
 #define KT_BREAK	0x100
 
@@ -119,6 +122,22 @@ int shift_asc[128] = {
 //kmap_ent keymap[256][16] = {
 //	{ /* 0 */
 
+void docmd(char* buf) {
+	if (strcmp(buf, "hello") == 0)
+		printf("Hello, world!\n");
+	else if (strcmp(buf, "halt") == 0)
+		powerdown();
+	else if (strcmp(buf,"panic") == 0)
+		panic();
+	else if (strcmp(buf,"ansi") == 0) {
+		for (int i = 40; i < 48; i++) {
+			for (int j = 30; j < 38; j++) {
+				printf ("\x1b[%dmx",j);
+			}
+			printf("\n");
+		}
+	}
+}
 int parse_buf (unsigned char* buf) { // 0: invalid key. Otherwise, the value of the key (unshifted)
 			    // < 128: ascii key
 			    // > 128: non-ascii
@@ -138,14 +157,32 @@ int parse_buf (unsigned char* buf) { // 0: invalid key. Otherwise, the value of 
 		xlated = kmap[(int)tmp] | (IS_BREAK ? KT_BREAK : 0);
 		if (xlated == F(1)) {
 			powerdown();
+		} else if (xlated == F(3)) {
+			__asm volatile ("int $0x3;");
+		} else {
+			apply_mod(&xlated, &mod);
+			if ((xlated != KEY_IGNORE) && (!IS_BREAK)) {
+				buf2[0] = xlated & 0x7f;
+				switch(buf2[0]) {
+					case '\b':
+						if (input_ct != 0) {
+							input_ct--;
+							printf("\b \b");
+						}
+						break;
+					case '\n':
+						input_buf[input_ct] = 0;
+						printf ("\n");
+						docmd(input_buf);
+						printf ("\nok ");
+						input_ct = 0;
+						break;
+					default:
+						input_buf[input_ct++] = buf2[0];
+						printf("%c",buf2[0]);
+				}
+			}
 		}
-		apply_mod(&xlated, &mod);
-		if ((xlated != KEY_IGNORE) && (!IS_BREAK)) {
-			buf2[0] = xlated & 0x7f;
-			k_swrite(buf2, OUT_STD);
-		}
-
-		;
 	}
 	return 0;
 }
@@ -204,9 +241,12 @@ void apply_mod (int *_xlated, int *_mod) {
 }
 
 
+static int disable = 0;
 void sc_proc (unsigned char keycode) {
 	static unsigned char scbuf[6];
 	static unsigned int scpos = 0;
+	if (disable)
+		return;
 
 	scbuf[scpos++]=keycode;
 	switch (scbuf[0]) {
@@ -231,3 +271,49 @@ void sc_proc (unsigned char keycode) {
 	}
 	return;
 }
+#define WAIT_FOR_DATA 1
+#define WAIT_FOR_SIGNAL 2
+inline void mouse_wait(u8_t a_type) {
+  u32_t _time_out=100000;
+  if(a_type==WAIT_FOR_DATA) {
+    while(_time_out--) {
+      if((inb(0x64) & 1)==1)
+        return;
+    }
+    return;
+  } else { // WAIT_FOR_SIGNAL
+    while(_time_out--) {
+      if((inb(0x64) & 2)==0)
+        return;
+    }
+    return;
+  }
+}
+
+inline void mouse_write(u8_t a_write) { 
+  mouse_wait(WAIT_FOR_SIGNAL);   //Wait to be able to send a command
+  outb(0x64, 0xD4);          //Tell PS2 we are sending a command to the mouse
+  mouse_wait(WAIT_FOR_SIGNAL);
+  outb(0x60, a_write);       //Finally write data byte.
+}
+static void kbd_init() {
+	input_buf[0] = 0;
+	input_ct = 0;
+	disable=1;
+	// Enable mouse...
+	outb (0x64, 0xa8);
+	outb (0x64, 0x20);
+	char tmp = inb (0x60);
+	outb (0x64, 0x60);
+	outb (0x60, tmp | 2);
+	disable = 0;
+	mouse_write(0xf6);
+	mouse_write(0xf4);
+//	outb (0x60, 0xf6);
+//	char tmp = inb (0x61);
+//	outb (0x61, tmp|0x80);
+//	outb (0x61, tmp&0x7f);
+//	outb (0x64, 0xd4);
+//	outb (0x60, 0xf4);
+}
+REGISTER_INIT(kbd_init)

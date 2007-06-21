@@ -1,8 +1,8 @@
 [global default_font]
 [global font]
 default_font:
-	incbin "../fonts/drdos8x6.raw"
+	incbin "../fonts/ter-i16f.raw"
 font_back:
-	incbin "../fonts/ter-i12n.xff"
+	incbin "../fonts/sun12x22.xff"
 font:	dd font_back
 

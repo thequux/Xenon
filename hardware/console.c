@@ -166,8 +166,14 @@ void k_swrite(char* str, int type) { // {{{
 				}
 			} // }}}
 		    }
+		    //CON.csibuf.nv = 1;
 		    gattr = attr;
 		    break;
+		case 2:
+			break;
+		case '\b':
+			CON.xpos--;
+			break;
 	    	case '\n':
 			CON.xpos = 0;
 			CON.ypos++;
@@ -179,6 +185,14 @@ void k_swrite(char* str, int type) { // {{{
 			 CON.xpos++;
 			 break;
 	    	}
+		if (CON.xpos > 79) {
+			CON.ypos++;
+			CON.xpos = 0;
+		}
+		if (CON.ypos > 24) {
+			//CON.scroll(&CON,1);
+			CON.ypos--;
+		}
 	        CON.mv_cur(&CON);
 	    } 
 	    str++;
@@ -234,7 +248,7 @@ switch (status->pos) { // {{{
 		}
 		break;
 } // }}}
-return 2;
+return '\x8c';
 }
 //{{{
 void spin(unsigned long int cycles) {

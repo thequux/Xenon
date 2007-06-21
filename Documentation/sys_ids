@@ -1,0 +1,7 @@
+1  What is a sys_id?
+====================
+
+During development, I was constantly screwing up by freeing other people's pages, swapping out the disk driver, etc.
+So I developed sys_ids, which are a unique ID for ownership.
+
+

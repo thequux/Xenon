@@ -4,7 +4,7 @@
 // CirrusFB driver
 #include <pci.h>
 #include <kalloc.h>
-#define VMEM_ADDR(x,y) (((y)*1024*3)+(x)*3)
+#define VMEM_ADDR(x,y) (((y)*(CON.xres)*3)+(x)*3)
 
 //static unsigned char* cur; // +(1024*3*427) - 341*3 - 1;
 unsigned char* lfb; // +(1024*3*427) - 341*3 - 1;
@@ -235,10 +235,68 @@ void init_chip() {
 
 	vga_write_hdr(0x00);
 }
-void set_parm(int w, int h, int bpp) {
-	(void)w;
-	(void)h;
+static int abs(int foo) { return (foo>0)?foo:-foo;}
+static void bestclock (long freq, long *best, long *nom,
+                       long *den, long *div, long maxfreq)
+{
+        long n, h, d, f;
+
+        *nom = 0;
+        *den = 0;
+        *div = 0;
+
+
+        if (freq < 8000)
+                freq = 8000;
+
+        if (freq > maxfreq)
+                freq = maxfreq;
+
+        *best = 0;
+        f = freq * 10;
+
+        for (n = 32; n < 128; n++) {
+                d = (143181 * n) / f;
+                if ((d >= 7) && (d <= 63)) {
+                        if (d > 31)
+                                d = (d / 2) * 2;
+                        h = (14318 * n) / d;
+                        if (abs (h - freq) < abs (*best - freq)) {
+                                *best = h;
+                                *nom = n;
+                                if (d < 32) {
+                                        *den = d;
+                                        *div = 0;
+                                } else {
+                                        *den = d / 2;
+                                        *div = 1;
+                                }
+                        }
+                }
+               d = ((143181 * n) + f - 1) / f;
+                if ((d >= 7) && (d <= 63)) {
+                        if (d > 31)
+                                d = (d / 2) * 2;
+                        h = (14318 * n) / d;
+                        if (abs (h - freq) < abs (*best - freq)) {
+                                *best = h;
+                                *nom = n;
+                                if (d < 32) {
+                                        *den = d;
+                                        *div = 0;
+                                } else {
+                                        *den = d / 2;
+                                        *div = 1;
+                                }
+                        }
+                }
+        }
+}
+int set_parm(int xres, int yres, int bpp, int refresh) {
+	(void)xres;
+	(void)yres;
 	(void)bpp;
+	(void)refresh;
 	// line_length	w*3
 	// max_clock	85500
 	// bpp		24
@@ -252,41 +310,121 @@ void set_parm(int w, int h, int bpp) {
 	// sr1f		86
 	// MCLK_final	86
 	// xres -> 1024
-	vga_write_crt(0x00,0xA3);
-	vga_write_crt(0x01,0x7F);
-	vga_write_crt(0x02,0x80);
-	vga_write_crt(0x03,0x88);
-	vga_write_crt(0x04,0x84);
-	vga_write_crt(0x05,0x95);
-	vga_write_crt(0x06,0x24);
-	vga_write_crt(0x07,0xFD);
+	int nom;
+	switch (bpp) {
+	case 16: nom = 2; break;
+	case 24: nom = 3; break;
+	//case 32: nom = 4; break;
+	default: printf("mode %dx%dx%d rejected: invalid depth\n", xres, yres, bpp); return -1;
+	}
+	// assume max of 4M of video mem...
+	if (xres * nom * yres > 0x400000) {
+		printf("mode %dx%dx%d too large to fit in video mem\n", xres, yres, bpp);
+	}
+	// Parameters checked... update CON
+	switch (bpp) {
+	case 16:  CON.bpp = 16;
+		  CON.roff = 10; CON.rlen = 5;
+		  CON.goff = 5;  CON.glen = 5;
+		  CON.boff = 0;  CON.blen = 5;
+		  break;
+	case 24:
+	case 32:  CON.bpp = bpp;
+		  CON.roff = 16; CON.rlen = 8;
+		  CON.goff = 8;  CON.glen = 8;
+		  CON.boff = 0;  CON.blen = 8;
+		  break;
+	}
+	CON.yres = yres;
+	CON.xres = xres;
+	CON.llen = xres * nom;
+
+	struct mode vmode = calc_gtf(xres, yres, refresh);
+//	           1000000
+	int freq = 1000000 / vmode.pclk;
+	int maxclock = 85500; // nom = 2 or 3.
+	if (freq > maxclock) {
+		printf ("frequncy too great\n");
+		return -1;
+	}
+	long rfreq, rnom, rden, rdiv, rmclk_div;
+	bestclock(freq, &rfreq, &rnom, &rden, &rdiv, maxclock);
+	// 928
+	long mclk;
+	mclk = ((((bpp / 8) * freq * 2) / 4) * 12) / 10;
+	if (mclk < 50000) mclk = 50000;
+
+	mclk = (((mclk * 16) / 14318)+1)/2;
+	switch (freq) {
+        case 24751 ... 25249:
+                rmclk_div = 2;
+                break;
+        case 49501 ... 50499:
+                rmclk_div = 1;
+		break;
+        default:
+                rmclk_div = 0;
+                break;
+        }
+	vga_write_crt(0x11, 0x20); // is this correct? VGADOC says 0x40
+	vga_write_crt(0x00,vmode.hfl / 8 - 5);
+	vga_write_crt(0x01,xres / 8 - 1);
+	vga_write_crt(0x02,xres / 8);
+	vga_write_crt(0x03,128+((vmode.hfl / 8)&32));
+	vga_write_crt(0x04,vmode.hss);
+	vga_write_crt(0x05,(vmode.hse & 31) + (((vmode.hfl / 8)&32)?128:0));
+	vga_write_crt(0x06,(vmode.vfl - 2)&0xff);
+	char tmp = 16;
+	if ((vmode.vfl-2)&256) tmp |= 1;
+	if ((yres-1)    &256) tmp |= 2;
+	if ((vmode.vss-1)&256) tmp |= 4;
+	if ((vmode.vse-1)&256) tmp |= 8;
+	if ((vmode.vfl-2)&512) tmp |= 32;
+	if ((vmode.vss-1)&512) tmp |= 64;
+	if ((vmode.vse-1)&512) tmp |= 128;
+	vga_write_crt(0x07,tmp);
 	
-	vga_write_crt(0x09,0x60);
-	vga_write_crt(0x10,0x02);
-	vga_write_crt(0x11,0x69);
-	vga_write_crt(0x12,0xFF);
+	tmp = 0x40;
+	if (yres & 512) tmp |= 0x20;
+	vga_write_crt(0x09,tmp);
+	vga_write_crt(0x10,(vmode.vss-1)&0xff);
+	vga_write_crt(0x11,((vmode.vse-1) & 0x15) + 32 + 64);
+	vga_write_crt(0x12,(yres-1)&0xff);
 	
-	vga_write_crt(0x15,0x00);
-	vga_write_crt(0x16,0x24);
+	vga_write_crt(0x15,yres & 0xff);
+	vga_write_crt(0x16,(vmode.vfl-2)&0xff);
 	vga_write_crt(0x18,0xff);
-	vga_write_crt(0x1A,0xC0);
-	vga_write_seq(0x0b,0x7d);
-	vga_write_seq(0x1B,0x2A);
-	vga_write_crt(0x17,0xc3);
+	tmp = 0;
+	tmp |= (vmode.hfl / 4) & 0x30;
+	tmp |= ((vmode.vfl-2)/4) & 0xc0;
+	vga_write_crt(0x1A,tmp);
+	vga_write_seq(0x0b,rnom);
+	vga_write_seq(0x1B,(rden << 1)| ((rdiv != 0)?1:0));
+	vga_write_crt(0x17,(yres>= 1024)?0xc7:0xc3);
 	vga_write_crt(0x19,0x00);
 	vga_write_seq(0x03,0x00);
-	vga_write_misc(0x3c2,0x03);
+	vga_write_misc(0x3c2,0x83);
 	vga_write_crt(0x08,0x00);
 	vga_write_crt(0x0a,0x00);
 	vga_write_crt(0x0b,0x1f);
-	vga_write_seq(0x07,0x25);
+	if (bpp == 16) {
+		vga_write_seq(0x07,0x27);
+		vga_write_hdr(0xc0);
+	} else {
+		vga_write_seq(0x07, 0x25);
+		vga_write_hdr(0xc5);
+	}
+	int offset = xres *3/ 8;
+	CON.offset = offset;
 	vga_write_gfx(0x05,0x64);
 	vga_write_misc(0x3c6,0xff);
-	vga_write_hdr(0xc5);
 	vga_write_seq(0x02,0x0a);
 	vga_write_seq(0x04,0xff);
-	vga_write_crt(0x13,0x80);
-	vga_write_crt(0x1B,0x3b);
+
+	//vga_write_crt(0x13,0x00);
+	//vga_write_crt(0x1B,0x22 ); // was 0x3b
+	vga_write_crt(0x13,(offset & 0xff) | 0x00);
+	vga_write_crt(0x1B,0x2b | ((offset & 0x100)?0x10:0) ); // was 0x3b
 	vga_write_crt(0x1D,0x00);
 	vga_write_crt(0x0e,0x00);
 	vga_write_crt(0x0f,0x00);
@@ -307,7 +445,7 @@ void set_parm(int w, int h, int bpp) {
 	vga_write_gfx(0x08,0xff);
 	vga_write_seq(0x12,0x00);
 	vga_write_seq(0x01,0x01);
-
+	return 0;
 }
 
 /*void disp_char(uchar val) ;
@@ -364,17 +502,17 @@ void cirrus_cls (struct console* THIS) {
 	while (inb(GRAPHICS_DATA_REG)&0x08)
 		/*do nothing */;
 	// pitch = line length
-	vga_write_gfx (0x24, 0x00);
-	vga_write_gfx (0x25, 0x0C);
-	vga_write_gfx (0x26, 0x00);
-	vga_write_gfx (0x27, 0x0C);
+	vga_write_gfx (0x24, (THIS->xres*3) & 0xff);
+	vga_write_gfx (0x25, (THIS->xres*3)>>8);
+	vga_write_gfx (0x26, (THIS->xres*3) & 0xff);
+	vga_write_gfx (0x27, (THIS->xres*3)>>8);
 
 	// num of pixels -1
-	vga_write_gfx (0x20, 0xff);
-	vga_write_gfx (0x21, 0x0b);
+	vga_write_gfx (0x20, (THIS->xres*3-1)&0xff);
+	vga_write_gfx (0x21, (THIS->xres*3-1)>>8);
 
-	vga_write_gfx (0x22, 0xff);
-	vga_write_gfx (0x23, 0x02);
+	vga_write_gfx (0x22, (THIS->yres-1)&0xff);
+	vga_write_gfx (0x23, (THIS->yres-1)>>8);
 
 	vga_write_gfx (0x28, 0x00);
 	vga_write_gfx (0x29, 0x00);
@@ -391,7 +529,7 @@ void cirrus_cls (struct console* THIS) {
 	vga_write_gfx (0x32, 0x0d);
 	vga_write_gfx (0x31, 0x02);
 #else
-	for (long int i = 0; i < 1024 * 768 * 3; i++) {
+	for (long int i = 0; i < CON.xres * CON.yres * 3; i++) {
 		lfb[i] =  0;
 	}
 #endif
@@ -426,10 +564,10 @@ void cirrus_cls (struct console* THIS) {
 		0xcaccd8,
 		0xcbced7
 		};
-	int beg = 756;
+	int beg = THIS->yres - 12;
 	for (int y = beg; y < beg+13; y++) {
 		uchar* vmem_l = lfb+VMEM_ADDR(0,y);
-		for (int x = 0; x < 1024; x++) {
+		for (int x = 0; x < THIS->xres; x++) {
 			*vmem_l++ =  bbar2[y-beg] & 0xff;
 			*vmem_l++ = (bbar2[y-beg] >> 8) & 0xff;
 			*vmem_l++ = (bbar2[y-beg] >> 16) & 0xff;
@@ -443,7 +581,7 @@ static void disp_char(struct console *THIS, uchar val) {
 	uchar* off_addr = lfb + VMEM_ADDR(off_x, off_y);
 	(void)off_addr;
 	(void)val;
-	int b = -1;
+	int b = 0;
 	unsigned char* glyph = font->glyphs+(font->glyph_size * val);
 	for (int i = 0; i < font->h; i++) {
 		unsigned char c = glyph[b];
@@ -469,9 +607,9 @@ void gee_whiz();
 void init_vga() {
 	char pal[] = {0x00, 0x00, 0x00, 0xff, 0xff, 0xff};
 	init_chip();
-	set_parm(0,0,0);
-	init_chip();
-	set_parm(0,0,0);
+	//set_parm(1024,768,24,60);
+	set_parm(1024,768,24,60);
+	//set_parm(800,600,24,60);
 
       pginfo.dir[1022].base = 0xe0000000 >> 12;
       pginfo.dir[1022].g = 0;
@@ -499,7 +637,9 @@ void init_vga() {
 	CON.putchar = disp_char;
 	CON.cls = cirrus_cls;
 	CON.mv_cur = mv_cur;
-	
+
+	CON.cls(&CON);
+
 	draw_cursor ((font->w - 2),
 		     0,
 		     2,
