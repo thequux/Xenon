@@ -1,0 +1,12 @@
+.makepp
+.makepp*
+*.o
+*.lst
+krnl
+krnl-1.gz
+krnl-s
+krnl.*
+hush
+boot.img
+asm/rmswitch.bin
+asm/rmhalt.bin
