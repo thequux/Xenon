@@ -3,6 +3,6 @@
 default_font:
 	incbin "../fonts/ter-i16f.raw"
 font_back:
-	incbin "../fonts/sun12x22.xff"
+	incbin "../fonts/drdos8x6.xff"
 font:	dd font_back
 
